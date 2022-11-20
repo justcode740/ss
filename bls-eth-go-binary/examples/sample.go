@@ -2,7 +2,12 @@ package main
 
 import (
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
+	"strconv"
+	"time"
+
+	"github.com/360EntSecGroup-Skylar/excelize/v2"
 	"github.com/herumi/bls-eth-go-binary/bls"
 )
 
@@ -79,15 +84,77 @@ func aggregateVerify(msg string, rawPks []string, sigToVerify string) bool {
 	return sig.FastAggregateVerify(pks, msgByte)
 }
 
+
+func verfiyAttestationByValidatorAndBlock(validatorIdx uint, blockSlot uint) {
+	
+}
+
+func testClient(){
+	eth2Client := newEth2Client()
+	root_data, pks, sig, _ := eth2Client.GetAttestationsForBlock(1041100, 237)
+	
+	fmt.Println(aggregateVerify(root_data, pks, sig))
+	// eth2Client.GetValidatorPubKey([])
+}
+
+func read_excel() {
+	f, err := excelize.OpenFile("./data/unslashed_double_votes.xlsx")
+	if err!=nil {
+		fmt.Println(err)
+	}
+	eth2Client := newEth2Client()
+	for i := 2; i < 15; i++ {
+		idx := strconv.Itoa(i)
+		validatorIdx, _ := f.GetCellValue("unslashed_double_votes", "B"+idx)
+		validator, _ := strconv.Atoi(validatorIdx)
+		blocksStr, _ := f.GetCellValue("unslashed_double_votes", "C"+idx)
+		var blocks []int
+		err := json.Unmarshal([]byte(blocksStr), &blocks)
+		if err != nil {
+			fmt.Println(err)
+		}
+		blocks = removeDuplicateInt(blocks)
+		for _, blockSlot := range blocks {
+			root_data, pks, sig, err := eth2Client.GetAttestationsForBlock(uint(blockSlot), validator)
+			if err != nil {
+				fmt.Print(err)
+			}else{
+				fmt.Print(strconv.FormatBool(aggregateVerify(root_data, pks, sig)) + "    ")
+			}
+			time.Sleep(1 * time.Second)
+			
+		}
+		fmt.Println()
+		
+
+	}
+
+   
+}
+
+func removeDuplicateInt(intSlice []int) []int {
+    allKeys := make(map[int]bool)
+    list := []int{}
+    for _, item := range intSlice {
+        if _, value := allKeys[item]; !value {
+            allKeys[item] = true
+            list = append(list, item)
+        }
+    }
+    return list
+}
+
 func main() {
 	bls.Init(bls.BLS12_381)
 	bls.SetETHmode(bls.EthModeDraft07)
-	data_root := "0x0d21b00f8daaa6a73e0d4a7149ca545612f287de6140f42d3f8d39d042d8c14f"
-	pks := []string{
-		"0x80468c2579b577e50b1e69755f06e72ebf6ae9caaed311882236f843567f07edfead2fa0f448861b09fe7685910bc241",
-		"0x9131c281f29c3abf34bdcd3a344bb22fa5b07291fbae97ba189be9242e1fdb0474a2ed17a98a87fecd4427714a53a8da",
-		"0xa6eb4ebdf9b217e2db544dfa205a90ab27b71269149368854ba61d7c52e39fe3d9c47529468fa1c00d8d85b10057df0a",
-	}
-	sig := "0xab417ccd597c9c1ff4cb58ea74bc89a59592f17d41449a131aa1484ac5a8a1e8e30224c7ef63da7aa33897b9767410df0ef547ae4b469748b45301eddecd86ad6e4b71287415e5c04ef08feb0a6c5b6b40e4bd7c132c73aa1d7bb8223a23c81f"
-	fmt.Println(aggregateVerify(data_root, pks, sig))
+	// data_root := "0x0d21b00f8daaa6a73e0d4a7149ca545612f287de6140f42d3f8d39d042d8c14f"
+	// pks := []string{
+	// 	"0x80468c2579b577e50b1e69755f06e72ebf6ae9caaed311882236f843567f07edfead2fa0f448861b09fe7685910bc241",
+	// 	"0x9131c281f29c3abf34bdcd3a344bb22fa5b07291fbae97ba189be9242e1fdb0474a2ed17a98a87fecd4427714a53a8da",
+	// 	"0xa6eb4ebdf9b217e2db544dfa205a90ab27b71269149368854ba61d7c52e39fe3d9c47529468fa1c00d8d85b10057df0a",
+	// }
+	// sig := "0xab417ccd597c9c1ff4cb58ea74bc89a59592f17d41449a131aa1484ac5a8a1e8e30224c7ef63da7aa33897b9767410df0ef547ae4b469748b45301eddecd86ad6e4b71287415e5c04ef08feb0a6c5b6b40e4bd7c132c73aa1d7bb8223a23c81f"
+	// fmt.Println(aggregateVerify(data_root, pks, sig))
+	read_excel()
+	// testClient()
 }
