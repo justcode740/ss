@@ -106,7 +106,7 @@ func (eth2Client *eth2Client) GetValidatorPubKey(validatorIdxs []int) []string {
 	}
 }
 
-func (eth2Client *eth2Client) GetAttestationsForBlock(blockSlot uint, validator int) (string, []string, string, error) {
+func (eth2Client *eth2Client) fetchBlockInfo(blockSlot uint) BlockAttestationsRes {
 	resp, err := http.Get(fmt.Sprintf("http://beaconcha.in/api/v1/block/%d/attestations", blockSlot))
 	if err != nil {
         fmt.Println("No response from request")
@@ -117,6 +117,11 @@ func (eth2Client *eth2Client) GetAttestationsForBlock(blockSlot uint, validator 
     if err := json.Unmarshal(body, &result); err != nil {  // Parse []byte to the go struct pointer
         fmt.Println("Can not unmarshal JSON")
     }
+	return result
+}
+
+func (eth2Client *eth2Client) GetAttestationsForBlock(blockSlot uint, validator int) (string, []string, string, error) {
+	result := eth2Client.fetchBlockInfo(blockSlot)
 	for _, rec := range result.Data {
 		// if rec.Committeeindex == 24 {
 		// 	fmt.Println(rec.Validators)
@@ -125,10 +130,14 @@ func (eth2Client *eth2Client) GetAttestationsForBlock(blockSlot uint, validator 
 			var pubKeys []string
 			i := 0
 			n := len(rec.Validators)
+			fmt.Println("len", n)
 			for(i < n) {
 				endIdx := min(i + 100, n)
 				keys := eth2Client.GetValidatorPubKey(rec.Validators[i: endIdx])
-				pubKeys = append(pubKeys, keys...) 
+				for _, key := range keys {
+					pubKeys = append(pubKeys, key)
+				}
+				// pubKeys = append(pubKeys, keys...) 
 				// fmt.Println(pubKeys)
 				i = i+100
 				time.Sleep(1 * time.Second)
