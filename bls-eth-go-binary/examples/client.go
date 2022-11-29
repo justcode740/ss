@@ -158,6 +158,11 @@ func (eth2Client *eth2Client) GetAttestationsForBlock(blockSlot uint, validator 
 	return "", nil, "", errors.New(fmt.Sprintf("validator %d not found in the %d block's attestation, maybe source data is wrong?", validator, blockSlot))
 }
 
+func (eth2Client *eth2Client) check(){
+	resp, _ := http.Get("http://public-mainnet-node.ethereum.org/eth/v1/beacon/states/100000/root")
+	fmt.Println(resp)
+}
+
 // -------------------------helper ------------------------------------------
 func contains(ids []int, id int) bool {
 	for _, idd := range ids {

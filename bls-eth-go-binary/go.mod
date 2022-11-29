@@ -4,9 +4,9 @@ require (
 	github.com/360EntSecGroup-Skylar/excelize/v2 v2.6.1 // indirect
 	github.com/dgraph-io/ristretto v0.1.1
 	github.com/golang-collections/collections v0.0.0-20130729185459-604e922904d3 // indirect
-	github.com/kr/pretty v0.1.0 // indirect
+	github.com/phoreproject/bls v0.0.0-20200525203911-a88a5ae26844 // indirect
 	github.com/pkg/errors v0.9.1
-	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
+	github.com/prysmaticlabs/prysm/v3 v3.1.2 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
 
