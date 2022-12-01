@@ -5,7 +5,7 @@ See `sample.go` for basic usage.
 To run the example:
 
 ```shell
-go run examples/sample.go
+go run examples/*.go
 ```
 
 Alternatively, run the example in a minimal `golang-alpine` Docker image:
