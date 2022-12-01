@@ -13,17 +13,22 @@ import (
 
 func getSigningRoot() [32]byte {
 	blockroot, _ := hex.DecodeString("1895bac33c8cecdf1c07a21fa0c1be683283a1c99f5964ed7bfeccc33104ecba")
+	sourceroot, _ := hex.DecodeString("ddead563586b895ec62d57511327b189535ac6209de9e76ff20816146d780711")
+	targetroot, _ := hex.DecodeString("70e6b618b1c11e1615faa06272b5d02761b9c157e342596d571bc37e8cf4a0da")
 	sig, _ := hex.DecodeString("89761ec8e2a086fb073204f9d48ed1a8e805e9871de9be0bac91a5f76aa5f261c2f748f50f48eb4a7b40a32998227f440c6e89302c9260cdb08837cbedd2d50ab92e53155679905ddf1a7a828d8fcc56a4d56c4543caf0eaa66aaa6778ac8c30")
 	att1 := util.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
 		Data: &ethpb.AttestationData{
 			Slot: types.Slot(99999),
 			CommitteeIndex: types.CommitteeIndex(7),
 			BeaconBlockRoot: blockroot,
-			Source: &ethpb.Checkpoint{Epoch: types.Epoch(3123)},
-			Target: &ethpb.Checkpoint{Epoch: types.Epoch(3124)},
+			Source: &ethpb.Checkpoint{
+				Epoch: types.Epoch(3123),
+				Root: sourceroot,},
+			Target: &ethpb.Checkpoint{Epoch: types.Epoch(3124),
+			Root: targetroot,},
 		},
 		Signature: sig,
-		AttestingIndices: []uint64{0, 1},
+		AttestingIndices: []uint64{21521, 128},
 	})
 	previousVersion, _ := hex.DecodeString("00000000")
 	currentVersion, _ :=  hex.DecodeString("00000000")
@@ -54,16 +59,24 @@ func getSigningRoot() [32]byte {
 
 
 // beaconroot hex string without 0x, sig hex string without 0x, 
-func getSigningRoot2(beaconroot string, signature string, slot uint, commmitteeIndex uint, sourceEpoch uint, targetEpoch uint) [32]byte {
+func getSigningRoot2(beaconroot string, signature string, slot uint, commmitteeIndex uint, sourceEpoch uint, targetEpoch uint, source string, target string) [32]byte {
 	blockroot, _ := hex.DecodeString(beaconroot)
+	sourceroot, _ := hex.DecodeString(source)
+	targetroot, _ := hex.DecodeString(target)
 	sig, _ := hex.DecodeString(signature)
 	att1 := util.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
 		Data: &ethpb.AttestationData{
 			Slot: types.Slot(slot),
 			CommitteeIndex: types.CommitteeIndex(commmitteeIndex),
 			BeaconBlockRoot: blockroot,
-			Source: &ethpb.Checkpoint{Epoch: types.Epoch(sourceEpoch)},
-			Target: &ethpb.Checkpoint{Epoch: types.Epoch(targetEpoch)},
+			Source: &ethpb.Checkpoint{
+				Epoch: types.Epoch(sourceEpoch),
+				Root: sourceroot,
+			},
+			Target: &ethpb.Checkpoint{
+				Epoch: types.Epoch(targetEpoch),
+				Root: targetroot,
+			},
 		},
 		Signature: sig,
 		AttestingIndices: []uint64{0, 1},

@@ -61,6 +61,7 @@ func sample4() {
 	var sec bls.SecretKey
 	secByte, _ := hex.DecodeString("4aac41b5cb665b93e031faa751944b1f14d77cb17322403cba8df1d6e4541a4d")
 	sec.Deserialize(secByte)
+	fmt.Println(sec)
 	msg := []byte("message to be signed.")
 	fmt.Printf("sec:%x\n", sec.Serialize())
 	pub := sec.GetPublicKey()
@@ -75,35 +76,38 @@ func aggregateVerify(msg []byte, rawPks []string, sigToVerify string) bool {
 	// fmt.Println(rawPks)
 	// fmt.Println(sigToVerify)
 	
-	// sig := bls.Sign{}
-	// sigByte, _ := hex.DecodeString(sigToVerify)
-	// sig.Deserialize(sigByte)
-	
-	// var pks []bls.PublicKey
-	// for _, rawPk := range rawPks {
-	// 	pk := bls.PublicKey{}
-	// 	pkByte, _ := hex.DecodeString(rawPk)
-	// 	pk.Deserialize(pkByte)
-	// 	pks = append(pks, pk)
-	// }
-	// // fmt.Println(pks[0])
-	// // fmt.Println(sig)
-
-	// return sig.FastAggregateVerify(pks, msg)
-	var sig bls.Sign
-	err := sig.DeserializeHexStr(sigToVerify)
-	if err != nil {
-		error.Error(err)
-	}
+	sig := bls.Sign{}
+	sig.DeserializeHexStr(sigToVerify)
+	fmt.Printf("%x\n", sig.Serialize())
 	
 	var pks []bls.PublicKey
 	for _, rawPk := range rawPks {
-		pk := &bls.PublicKey{}
-		pkByte, _ := hex.DecodeString(rawPk)
-		pk.Deserialize(pkByte)
-		pks = append(pks, *pk)
+		pk := bls.PublicKey{}
+		pk.DeserializeHexStr(rawPk)
+		fmt.Printf("%x\n", pk.Serialize())
+		pks = append(pks, pk)
 	}
+	
+	// fmt.Println(pks[0])
+	// fmt.Println(sig)
+
 	return sig.FastAggregateVerify(pks, msg)
+	// var sig bls.Sign
+	// err := sig.DeserializeHexStr(sigToVerify)
+	// if err != nil {
+	// 	error.Error(err)
+	// }
+	// fmt.Printf("%x\n", sig.Serialize())
+
+	
+	// var pks []bls.PublicKey
+	// for _, rawPk := range rawPks {
+	// 	pk := &bls.PublicKey{}
+	// 	pkByte, _ := hex.DecodeString(rawPk)
+	// 	pk.Deserialize(pkByte)
+	// 	pks = append(pks, *pk)
+	// }
+	// return sig.FastAggregateVerify(pks, msg)
 }
 
 
@@ -222,7 +226,7 @@ func check_excel_with_local_data(){
 				if contains(attestation.Validators, validator) {
 					// fmt.Print(len(attestation.Validators))
 					// get data root
-					signing_root := getSigningRoot2(attestation.Beaconblockroot[2:], attestation.Signature[2:], uint(attestation.Slot), uint(attestation.Committeeindex), uint(attestation.SourceEpoch), uint(attestation.TargetEpoch))
+					signing_root := getSigningRoot2(attestation.Beaconblockroot[2:], attestation.Signature[2:], uint(attestation.Slot), uint(attestation.Committeeindex), uint(attestation.SourceEpoch), uint(attestation.TargetEpoch),"","")
 					// data, _ := hex.DecodeString(attestation.Beaconblockroot[2:])
 					// fmt.Print(msg)
 					// get pubkeys
@@ -353,25 +357,51 @@ func main() {
 	// 	"0xa6eb4ebdf9b217e2db544dfa205a90ab27b71269149368854ba61d7c52e39fe3d9c47529468fa1c00d8d85b10057df0a",
 	// }
 	// pk1 := "0x930eb7c8dd107d2e1c444b17863c3209dc153af4ed4f3222f9c8be3608c772bc94e5ceab0b3940feefa79a13c87d5896"
-	// // pk2 := "a323ec9163f8564020c15edf442c95240342fcaaf9cc06d9e3367c63e85af6173727b8b0bacc689acd41859301f70bcd"
-	// // pk3 := "0x81690c370330ac17a48cdcfae58c89ab2061f7222409896d06134f4d89f896d2d375f567a541f11de9d2a6966ae256e7"
-	// // getSigningRoot2("")
+	// pk2 := "a323ec9163f8564020c15edf442c95240342fcaaf9cc06d9e3367c63e85af6173727b8b0bacc689acd41859301f70bcd"
+	// pk3 := "0x81690c370330ac17a48cdcfae58c89ab2061f7222409896d06134f4d89f896d2d375f567a541f11de9d2a6966ae256e7"
+	// getSigningRoot2("")
 	// data, _ := hex.DecodeString("397f63851a66cd9bee5291a86356a11a4f0f314316ebd10c9b5455b28b2783ff")
 	// signing_root := getSigningRoot2("397f63851a66cd9bee5291a86356a11a4f0f314316ebd10c9b5455b28b2783ff",
 	// "a12cb3d04c4cd05b869a2d9cef5e11115348bb1e27fec217bcdf26fb42c74c69ec5f595c9692d4d2f8858a4f0ecd310a0e71c528bff539945b83693a8fb371f86725bd7294fc3f29296adcbf9d63b08952c148862fdceaf0065d72681b072da8",
 	// 918914,
 	// 23,
-	// 28715,
+	// 28715,""
 	// 28716)
 	// fmt.Println(len(data[:]))
 	// fmt.Println(len(signing_root[:]))
 	// pks := []string{pk1}
 	// sig := "0xa12cb3d04c4cd05b869a2d9cef5e11115348bb1e27fec217bcdf26fb42c74c69ec5f595c9692d4d2f8858a4f0ecd310a0e71c528bff539945b83693a8fb371f86725bd7294fc3f29296adcbf9d63b08952c148862fdceaf0065d72681b072da8"
-	// fmt.Println(aggregateVerify(data, pks, sig))
+	// data := getSigningRoot()
+	// // data := "1895bac33c8cecdf1c07a21fa0c1be683283a1c99f5964ed7bfeccc33104ecba"
+	// // d, _ := hex.DecodeString(data)
+	// pks := []string{"87acda545d5c84996d757f6222567d5ec579ef55dbc4214ef49aa2b49cfef063e0c39b4943cdfec8eba58c92c4eca96b"}
+	// sig := "89761ec8e2a086fb073204f9d48ed1a8e805e9871de9be0bac91a5f76aa5f261c2f748f50f48eb4a7b40a32998227f440c6e89302c9260cdb08837cbedd2d50ab92e53155679905ddf1a7a828d8fcc56a4d56c4543caf0eaa66aaa6778ac8c30"
+
+	// fmt.Println(aggregateVerify(data[:], pks, sig))
+	sig := "ae45ef50458f22a0ab4161d31db59b649b8088bceed7f4d1bf7a3beb2622e40cb24da34394e76beaabb0ad650ee17a5a1716b3b11f91320415448c866ada3a6b6a98da49eec2b6b66a23a9e70dd09bf4ac2f78cf8a1d5f17d5a894fb8396d77f"
+
+	data := getSigningRoot2(
+		"1895bac33c8cecdf1c07a21fa0c1be683283a1c99f5964ed7bfeccc33104ecba",
+		sig,
+		99999,
+		1,
+		3123,
+		3124,
+		"ddead563586b895ec62d57511327b189535ac6209de9e76ff20816146d780711",
+		"70e6b618b1c11e1615faa06272b5d02761b9c157e342596d571bc37e8cf4a0da",
+	)
+	// data := "1895bac33c8cecdf1c07a21fa0c1be683283a1c99f5964ed7bfeccc33104ecba"
+	// d, _ := hex.DecodeString(data)
+	pks := []string{"8e6fb6671582f7452ba35c171d5c824565ab231750cc068202fe37868c3481af82f3f051818d1c905c0a54f822609dc7",
+"a323ec9163f8564020c15edf442c95240342fcaaf9cc06d9e3367c63e85af6173727b8b0bacc689acd41859301f70bcd"}
+
+
+	fmt.Println(aggregateVerify(data[:], pks, sig))
 	// fmt.Println(aggregateVerify(signing_root[:], pks, sig))
 	// t := []byte{97 ,54, 190}
 	// fmt.Println(aggregateVerify(t, pks, sig))
-	testLib2()
+	// testLib2()
+	// sample4()
 
 
 	// // c:=newEth2Client()
