@@ -69,7 +69,7 @@ func findValidatorsOfInterestDoubleVote(){
 		}
 		blocks = removeDuplicateInt(blocks)
 		for _, blockSlot := range blocks {
-			res := readBlockInfo(uint(blockSlot))
+			res := readBlockInfo(blockInfoDataFolder, uint(blockSlot))
 			c := 0
 			for _, attestation := range (res.Data) {
 				if contains(attestation.Validators, validator) {
@@ -131,5 +131,12 @@ func getValidatorMap2() map[int]string {
 		line ++
 	}
 	return data
+}
+
+func getValidatorMap3() map[int]string {
+	file, _ := ioutil.ReadFile("data/allValidators.json")
+	var validators map[int]string
+	_  = json.Unmarshal([]byte(file), &validators)
+	return validators
 }
 

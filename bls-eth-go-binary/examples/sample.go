@@ -5,6 +5,9 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"sync"
+
+	// "io/ioutil"
 	"os"
 	"strconv"
 	"strings"
@@ -15,6 +18,8 @@ import (
 )
 
 var allValidators map[int]string
+var mp  map[string]bool
+
 
 func sample1() {
 	fmt.Printf("sample1\n")
@@ -91,25 +96,104 @@ func aggregateVerify(msg []byte, rawPks []string, sigToVerify string) bool {
 
 
 func verfiyAttestationByValidatorAndBlock(validator int, blockSlot int) []bool {
-	block := readBlockInfo(uint(blockSlot))
+	block := readBlockInfo(blockInfoDataFolder, uint(blockSlot))
 	res := []bool{}
 	for _, attestation := range (block.Data) {
 		if contains(attestation.Validators, validator) {
+			key := strconv.Itoa(attestation.Slot) + ":" + strconv.Itoa(attestation.Committeeindex)
+			if !mp[key] {
+				mp[key] = true
+			}
 			// get data root
 			signing_root := getSigningRoot2(attestation.Beaconblockroot[2:], attestation.Signature[2:], uint(attestation.Slot), uint(attestation.Committeeindex), uint(attestation.SourceEpoch), uint(attestation.TargetEpoch), attestation.SourceRoot[2:], attestation.TargetRoot[2:])
-			// get pubkeys
-			var pks []string
-			for _, idx := range attestation.Validators {
-				// fmt.Println(idx, all_validators[idx], all_validators[idx]])
-				
-				pks = append(pks, allValidators[idx][2:])
-			}
 			// get sig to verify
 			sig := attestation.Signature[2:]
-			res = append(res, aggregateVerify(signing_root[:], pks, sig))
+			var pks []string
+			for _, idx := range attestation.Validators {
+				pks = append(pks, allValidators[idx][2:])
+			}
+			// pks = append(pks, "958391837758f8275e71bf34405d27a509ff1b7de4e7a53d87aa89dbb6800e0f100f57e9fd1a1c1b7f908c3860dfddb4")
+			
+			r := aggregateVerify(signing_root[:], pks, sig)
+			res = append(res, r)
+			// if r {
+			// 	fmt.Println(pks)
+			// }
+			// get pubkeys
+			// for idx, _ := range allValidators {
+				
+			// }
+			// res = append(res, r)
+			// if len(pks)==1 && !r {
+			// 	fmt.Println(validator, blockSlot)
+			// }
 		}
 	}
+	
 	return res
+}
+
+func verifyAllAttestationInBlock(blockSlot int) []bool {
+	block := readBlockInfo("test/", uint(blockSlot))
+	res := []bool{}
+	for _, attestation := range (block.Data) {
+		key := strconv.Itoa(attestation.Slot) + ":" + strconv.Itoa(attestation.Committeeindex)
+		if !mp[key] {
+			mp[key] = true
+		}
+		// get data root
+		signing_root := getSigningRoot2(attestation.Beaconblockroot[2:], attestation.Signature[2:], uint(attestation.Slot), uint(attestation.Committeeindex), uint(attestation.SourceEpoch), uint(attestation.TargetEpoch), attestation.SourceRoot[2:], attestation.TargetRoot[2:])
+		// get sig to verify
+		sig := attestation.Signature[2:]
+		var pks []string
+		for _, idx := range attestation.Validators {
+			pks = append(pks, allValidators[idx][2:])
+		}
+		// pks = append(pks, "958391837758f8275e71bf34405d27a509ff1b7de4e7a53d87aa89dbb6800e0f100f57e9fd1a1c1b7f908c3860dfddb4")
+		
+		r := aggregateVerify(signing_root[:], pks, sig)
+		if !r{
+			fmt.Println(blockSlot, attestation.Signature)
+			
+		}
+		res = append(res, r)
+	}
+	
+	return res
+}
+
+func searchSinglePubKey(validator int, blockSlot int) {
+	block := readBlockInfo(blockInfoDataFolder, uint(blockSlot))
+	for _, attestation := range (block.Data) {
+		if contains(attestation.Validators, validator) {
+			key := strconv.Itoa(attestation.Slot) + ":" + strconv.Itoa(attestation.Committeeindex)
+			if !mp[key] {
+				mp[key] = true
+			}
+			// get data root
+			signing_root := getSigningRoot2(attestation.Beaconblockroot[2:], attestation.Signature[2:], uint(attestation.Slot), uint(attestation.Committeeindex), uint(attestation.SourceEpoch), uint(attestation.TargetEpoch), attestation.SourceRoot[2:], attestation.TargetRoot[2:])
+			// get sig to verify
+			sig := attestation.Signature[2:]
+			var wg sync.WaitGroup
+			wg.Add(1)
+			for idx, pubkey := range allValidators{
+				go func(idx int, pubkey string) {
+					var pks []string
+					pks = append(pks, pubkey[2:])
+					r := aggregateVerify(signing_root[:], pks, sig)
+					if r {
+						wg.Done()
+						fmt.Println(idx, pubkey)
+					}
+				}(idx, pubkey)
+				
+
+			}
+			wg.Wait()
+			break	
+		}
+	}
+	
 }
 
 func checkExcel() {
@@ -173,6 +257,8 @@ func checkDoubleVoteWithLocalData(){
 		}
 		fmt.Println()
 	}
+	// file, _ := json.MarshalIndent(mp, "", " ")
+	// _ = ioutil.WriteFile("slot:committeeIdx.json", file, 0644)
 	
 }
 
@@ -233,7 +319,7 @@ func checkalgo(){
 		c, t, f:=0,0,0
 		
 		for _, blockSlot := range blocks {
-			res := readBlockInfo(uint(blockSlot))
+			res := readBlockInfo(blockInfoDataFolder, uint(blockSlot))
 			for _, attestation := range (res.Data) {
 				if !contains(attestation.Validators, validator) {
 					// get data root
@@ -246,7 +332,7 @@ func checkalgo(){
 					// get sig to verify
 					sig := attestation.Signature
 					check:=aggregateVerify(nil, pks, sig)
-					fmt.Print(strconv.FormatBool(check)+"  ")
+					// fmt.Print(strconv.FormatBool(check)+"  ")
 					if check{
 						t++
 					}else{
@@ -284,16 +370,65 @@ func removeDuplicateInt(intSlice []int) []int {
     return list
 }
 
+// 4219 608065 included_in: 608067 
+// 56119 608090
+// 0x958391837758f8275e71bf34405d27a509ff1b7de4e7a53d87aa89dbb6800e0f100f57e9fd1a1c1b7f908c3860dfddb4
+//25359  988961 included in: 988965
+// 99842 988973
+//0x857f7ca393da6f6fd816ef37b5cc7f3b33bdf23421625de8e5922399390af1de3596da010ea047cb452ee6eb766005cd
+//42021 918914 918922
+//98751 918940
+// 0xb24928375d7ebb58e50544dc569f0a9e4aa67346ea3d7efa3d93995bc1e11c9ad656410e4d634c60a04e7197b064958d
+//56833 918914 918922
+// 98778 918925
+// 0x8ef8a6aa04403f7a25ad8bbb0845c183be8bd83f9680bed6df396231ee94a2248de1af367a67e16683e69d82e63a8818
+//57356  918914 918922
+// 75274 918930
+// 0x973ea7aa4fd07db36c3be5a075e81fde16172ceb8a207f65812eb08601b78f6bc9756a7af00275a109db02f2197efc4c
+
 func main() {
 	bls.Init(bls.BLS12_381)
 	bls.SetETHmode(bls.EthModeDraft07)
 	
-	allValidators = getValidatorMap2()
-	writeValidatorDict(allValidators)
-
-
+	allValidators = getValidatorMap3()
+	mp = make(map[string]bool)
+	// batchWriteBlockInfo("test/", []uint{3})
+	// batchWriteBlockInfo("uninterested/", []uint{608065})
 	// checkDoubleVoteWithLocalData()
+	// a := []int{1041108, 1041109, 1041117}
+	// for _, v := range a{
+	// 	fmt.Println(verfiyAttestationByValidatorAndBlock(33096, v))
+		
+	// }
+	// verfiyAttestationByValidatorAndBlock()
+	verifyAllAttestationInBlock(3)
+	
+
+	// searchSinglePubKey(88475, 608067)
+	// for i := 608064; i<= 608086; i++{
+	// 	if !contains(allBlocks, i){
+	// 		fmt.Println(i)
+	// 		verifyAllAttestationInBlock(i)
+	// 	}
+		
+	// }
+	// // verfiyAttestationByValidatorAndBlock(4219, 608067)
 	// checkSurroundVoteWithLocalData()
+	// file, _ := json.MarshalIndent(mp, "", " ")
+	// _ = ioutil.WriteFile("total_slot:committeeIdx.json", file, 0644)
+	// r := verfiyAttestationByValidatorAndBlock(4219, 608067)
+	// fmt.Println(r)
+	
+	// for i := 608064; i <= 608095; i++{
+	// 	attestations := readBlockInfo("epoch/", uint(i))
+	// 	for _, attestation := range(attestations.Data){
+	// 		// fmt.Println(attestation.Committeeindex==11)
+	// 		if contains(attestation.Validators, 4219){
+	// 			fmt.Println(attestation)
+	// 		}
+	// 	}
+	// }
+
 	// getValidatorMap2()
 	
 }
