@@ -415,8 +415,8 @@ func main() {
 
 	var blockId uint64
 	verifyAllAttestationInBlockCmd := &cobra.Command {
-		Use: "verify --blockId=<blockslot>",
-		Short: "verifyAllAttestationInBlock --blockId=<blockslot>",
+		Use: "verifyAll --blockId=<blockslot>",
+		Short: "verify all attestations in a specified block",
 		Long: "verifyAllAttestationInBlock [blockid] if the block doesn't exist locally, fetch the block from beaconcha.in under test/ and verify",
 		Run: func(cmd *cobra.Command, args []string) {
 			fmt.Println(verifyAllAttestationInBlock(int(blockId)))
@@ -429,8 +429,8 @@ func main() {
 	var validatorIdx uint64
 	verifyAttestationByValidatorAndBlockCmd := &cobra.Command {
 		Use: "verify --valIdx=<validatorIdx> --blockId=<blockslot>",
-		Short: "verifyAllAttestationInBlock --blockId=<blockslot>",
-		Long: "verifyAllAttestationInBlock [blockid] if the block doesn't exist locally, fetch the block from beaconcha.in under test/ and verify",
+		Short: "verify attestations that contains validatorIdx in a specified block",
+		Long: "verfiyAttestationByValidatorAndBlock [blockid] verify att that involves [valIdx]",
 		Run: func(cmd *cobra.Command, args []string) {
 			fmt.Println(verfiyAttestationByValidatorAndBlock(int(validatorIdx), int(blockId)))
 		},
@@ -440,11 +440,10 @@ func main() {
 	verifyAttestationByValidatorAndBlockCmd.MarkFlagRequired("blockId")
 	verifyAttestationByValidatorAndBlockCmd.MarkFlagRequired("valIdx")
 
-	
 	var typ string
 	checkCmd := &cobra.Command {
 		Use: "check --type=double|surround",
-		Short: "check --type=double|surround",
+		Short: "check for all interested attestations in double / surround vote detected from beaconcha.in",
 		Long: "check for interested blocks in potential double vote / surround vote detected from beaconcha.in",
 		Run: func(cmd *cobra.Command, args []string) {
 			switch typ {
@@ -461,20 +460,26 @@ func main() {
 
 	searchCmd := &cobra.Command {
 		Use: "search --valIdx=<validatorIdx> --blockId=<blockId>",
-		Short: "search --valIdx=<validatorIdx> --blockId=<blockId>",
+		Short: "brute-force search for correct signer for sinlge validator case",
 		Long: "brute-force search for correct signer for sinlge validator case",
 		Run: func(cmd *cobra.Command, args []string) {
 			idx, pubkey := searchSinglePubKey(int(validatorIdx), int(blockId))
 			fmt.Println(idx, pubkey)
 		},
 	}
-
 	searchCmd.Flags().Uint64Var(&blockId, "blockId", 0, "Required argument")
 	searchCmd.Flags().Uint64Var(&validatorIdx, "valIdx", 0, "Required argument")
 	searchCmd.MarkFlagRequired("blockId")
 	searchCmd.MarkFlagRequired("valIdx")
 
-
+	verifyAllCmd := &cobra.Command {
+		Use: "verifyDrive",
+		Short: "fetch from google drive and verify all atts for all blocks, output failed verification to verificationResult/",
+		Long: "fetch from google drive and verify all atts",
+		Run: func(cmd *cobra.Command, args []string) {
+			verifyAllFromDrive()
+		},
+	}
 
 
 	rootCmd.AddCommand(argsCmd)
@@ -482,7 +487,7 @@ func main() {
 	rootCmd.AddCommand(verifyAttestationByValidatorAndBlockCmd)
 	rootCmd.AddCommand(checkCmd)
 	rootCmd.AddCommand(searchCmd)
-
+	rootCmd.AddCommand(verifyAllCmd)
 
 	// Parse the command line flags and arguments
 	rootCmd.Execute()
