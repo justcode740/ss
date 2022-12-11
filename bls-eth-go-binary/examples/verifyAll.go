@@ -27,6 +27,7 @@ import (
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/drive/v3"
 	"github.com/cenkalti/backoff/v4"
+	"golang.org/x/sync/semaphore"
 )
 func t(){
 	
@@ -59,10 +60,13 @@ func t(){
 	// Get all files name and sort 
 	allFiles := getFiles(srv, folderID)
 
+	alreadyProcessed := []int{5000, 10000, 15000, 35000}
+
 	// Only consider first 1.75mm 1750000
 	files := []*drive.File{}
 	for _, file := range allFiles {
 		blockSlot, _ := strconv.ParseInt(strings.Split(strings.Split(file.Name, ".")[0], "_")[2], 10, 64)
+		if contains(alreadyProcessed, int(blockSlot)) {continue}
 		if blockSlot > 1750000 {		
 			break
 		}
@@ -70,9 +74,15 @@ func t(){
 	}
 	
 	var outWg sync.WaitGroup
+	sem := semaphore.NewWeighted(10)
 	for _, f := range files {
 			outWg.Add(1)
 			go func (f *drive.File) {
+				err := sem.Acquire(context.Background(), 1)
+				if err != nil {
+					fmt.Println(err)
+					panic(err)
+				}
 				reader, err := readFile(srv, f.Id)
 				if err != nil {
 					// handle error
@@ -173,11 +183,11 @@ func t(){
 				}else{
 					panic(fmt.Sprintf("get a file with unknown suffix %s", f.Name))
 				}
+				sem.Release(1)
 				outWg.Done()
-			}(f)	
+			}(f)
 	}
 	outWg.Wait()
-
 }
 
 
@@ -310,7 +320,7 @@ var times int
 func readFile(service *drive.Service, fileId string) (io.Reader, error) {
 	times++
 	// work around googleapi: Error 403: Rate Limit Exceeded, rateLimitExceeded
-	if times % 300 == 0 {
+	if times % 50 == 0 {
 		time.Sleep(100 * time.Second)
 	}
 	var r *http.Response
@@ -325,7 +335,7 @@ func readFile(service *drive.Service, fileId string) (io.Reader, error) {
 	err := backoff.Retry(operation, backoff.NewExponentialBackOff())
 	if err != nil {
 		// Handle error.
-		fmt.Println("strange", err)
+		fmt.Println("strange", times, fileId, err)
 	}
 	
 	return r.Body, nil

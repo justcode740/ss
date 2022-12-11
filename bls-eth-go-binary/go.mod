@@ -10,6 +10,7 @@ require (
 	github.com/prysmaticlabs/prysm/v3 v3.1.2 // indirect
 	github.com/tealeg/xlsx v1.0.5 // indirect
 	golang.org/x/oauth2 v0.3.0 // indirect
+	golang.org/x/sync v0.1.0 // indirect
 	google.golang.org/api v0.104.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
