@@ -133,6 +133,17 @@ func verfiyAttestationByValidatorAndBlock(validator int, blockSlot int) []bool {
 	return res
 }
 
+func verifyAttestation(beaconBlockRoot string, sig string, slot uint, committeeIdx uint, sourceEpoch uint, targetEpoch uint, sourceRoot string, targetRoot string, validators []int) bool {
+	// get data root
+	signing_root := getSigningRoot2(beaconBlockRoot[2:], sig[2:], slot, committeeIdx, sourceEpoch, targetEpoch, sourceRoot[2:],  targetRoot[2:])
+	var pks []string
+	for _, idx := range validators {
+		pks = append(pks, allValidators[idx][2:])
+	}
+	r := aggregateVerify(signing_root[:], pks, sig[2:])
+	return r
+}
+
 func verifyAllAttestationInBlock(blockSlot int) []bool {
 	block := readBlockInfo("test/", uint(blockSlot))
 	res := []bool{}
@@ -401,7 +412,11 @@ func main() {
 		
 	// }
 	// verfiyAttestationByValidatorAndBlock()
-	verifyAllAttestationInBlock(3)
+	// verifyAllAttestationInBlock(3)
+	start := time.Now()
+	t()
+	fmt.Println(time.Since(start))
+	
 	
 
 	// searchSinglePubKey(88475, 608067)

@@ -81,8 +81,22 @@ func getSigningRoot2(beaconroot string, signature string, slot uint, commmitteeI
 		Signature: sig,
 		AttestingIndices: []uint64{0, 1},
 	})
-	previousVersion, _ := hex.DecodeString("00000000")
-	currentVersion, _ :=  hex.DecodeString("00000000")
+	// slot 0-(74239+1)*32-1 is 0,0, 
+	// 74240*32-(144895+1)*32-1 is 0,1, 
+	// 144896*32-last is 1,2
+	var previousVersion []byte
+	var currentVersion []byte
+	if slot >=0 && slot <= 74240 * 32 - 1 {
+		previousVersion, _ = hex.DecodeString("00000000")
+		currentVersion, _ =  hex.DecodeString("00000000")
+	}else if slot >= 74240 * 32 && slot <= 144896*32-1 {
+		previousVersion, _ = hex.DecodeString("00000000")
+		currentVersion, _ =  hex.DecodeString("01000000")
+	}else if slot >= 144896*32 {
+		previousVersion, _ = hex.DecodeString("01000000")
+		currentVersion, _ =  hex.DecodeString("02000000")
+	}
+	
 	fork := &ethpb.Fork{
 		PreviousVersion: previousVersion,
 		CurrentVersion: currentVersion,
