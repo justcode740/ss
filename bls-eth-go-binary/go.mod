@@ -2,6 +2,7 @@ module github.com/herumi/bls-eth-go-binary
 
 require (
 	github.com/360EntSecGroup-Skylar/excelize/v2 v2.6.1 // indirect
+	github.com/cenkalti/backoff/v4 v4.2.0 // indirect
 	github.com/dgraph-io/ristretto v0.1.1
 	github.com/golang-collections/collections v0.0.0-20130729185459-604e922904d3 // indirect
 	github.com/phoreproject/bls v0.0.0-20200525203911-a88a5ae26844 // indirect

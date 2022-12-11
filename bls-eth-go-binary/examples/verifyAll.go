@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"encoding/csv"
 	"encoding/json"
@@ -25,6 +26,7 @@ import (
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/drive/v3"
+	"github.com/cenkalti/backoff/v4"
 )
 func t(){
 	
@@ -57,11 +59,11 @@ func t(){
 	// Get all files name and sort 
 	allFiles := getFiles(srv, folderID)
 
-	// Only consider first 1.75mm
+	// Only consider first 1.75mm 1750000
 	files := []*drive.File{}
 	for _, file := range allFiles {
 		blockSlot, _ := strconv.ParseInt(strings.Split(strings.Split(file.Name, ".")[0], "_")[2], 10, 64)
-		if blockSlot > 1750000 {
+		if blockSlot > 1750000 {		
 			break
 		}
 		files = append(files, file)
@@ -77,7 +79,10 @@ func t(){
 				}
 				if strings.HasSuffix(f.Name, "csv") {
 					csvReader := csv.NewReader(reader)
-					records, _ := csvReader.ReadAll()
+					records, err := csvReader.ReadAll()
+					if err != nil{
+						fmt.Println("ERR", f.Name)
+					}
 					falseRows := [][]string{}
 					var mutex sync.Mutex
 					var wg sync.WaitGroup
@@ -292,6 +297,8 @@ func getClient(config *oauth2.Config) *http.Client {
 	}
 	return config.Client(context.Background(), tok)
 }
+
+var times int
 	
 
 // func readFile(service *drive.Service, fileId string) (io.Reader, error) {
@@ -301,11 +308,26 @@ func getClient(config *oauth2.Config) *http.Client {
 // 	// return r.(*drive.MediaData).Body, nil
 // }
 func readFile(service *drive.Service, fileId string) (io.Reader, error) {
-	// Download the file in XLSX format
-	r, err := service.Files.Get(fileId).Download()
-	if err != nil {
-		return nil, err
+	times++
+	// work around googleapi: Error 403: Rate Limit Exceeded, rateLimitExceeded
+	if times % 300 == 0 {
+		time.Sleep(100 * time.Second)
 	}
+	var r *http.Response
+	// An operation that may fail.
+	operation := func() error {
+		res, err := service.Files.Get(fileId).Download()
+		r = res
+		return err // or an error
+	}
+
+	// exponential backoff to aovid 503 err like googleapi: got HTTP response code 503 with body: Service Unavailable
+	err := backoff.Retry(operation, backoff.NewExponentialBackOff())
+	if err != nil {
+		// Handle error.
+		fmt.Println("strange", err)
+	}
+	
 	return r.Body, nil
 }
 
