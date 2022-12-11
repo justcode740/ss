@@ -61,12 +61,24 @@ func t(){
 	allFiles := getFiles(srv, folderID)
 
 	alreadyProcessed := []int{5000, 10000, 15000, 35000}
+	// ERR beaconchain_attestation_430000.csv
+	// ERR beaconchain_attestation_480000.csv
+	// ERR beaconchain_attestation_475000.csv
+	// ERR beaconchain_attestation_190000.csv
+	// ERR beaconchain_attestation_340000.csv
+	// ERR beaconchain_attestation_640000.csv
+	// ERR beaconchain_attestation_605000.csv
+	// ERR beaconchain_attestation_585000.csv
+	// ERR beaconchain_attestation_610000.csv
+	// strange 84 1FMuyGeOkEvzOEtQEJ6bqO3bkhxRsSYvi Get "https://www.googleapis.com/drive/v3/files/1FMuyGeOkEvzOEtQEJ6bqO3bkhxRsSYvi?alt=media&prettyPrint=false": read tcp 192.168.171.97:51202->142.250.65.234:443: read: connection timed out
+	// ERR beaconchain_attestation_645000.csv
 
 	// Only consider first 1.75mm 1750000
 	files := []*drive.File{}
 	for _, file := range allFiles {
 		blockSlot, _ := strconv.ParseInt(strings.Split(strings.Split(file.Name, ".")[0], "_")[2], 10, 64)
 		if contains(alreadyProcessed, int(blockSlot)) {continue}
+		if blockSlot < 645000 {continue}
 		if blockSlot > 1750000 {		
 			break
 		}
@@ -74,7 +86,7 @@ func t(){
 	}
 	
 	var outWg sync.WaitGroup
-	sem := semaphore.NewWeighted(10)
+	sem := semaphore.NewWeighted(5)
 	for _, f := range files {
 			outWg.Add(1)
 			go func (f *drive.File) {

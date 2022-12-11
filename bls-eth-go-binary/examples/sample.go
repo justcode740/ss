@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	// "log"
 	"sync"
 
 	// "io/ioutil"
@@ -15,6 +16,7 @@ import (
 
 	"github.com/360EntSecGroup-Skylar/excelize/v2"
 	"github.com/herumi/bls-eth-go-binary/bls"
+	"github.com/spf13/cobra"
 )
 
 var allValidators map[int]string
@@ -100,10 +102,6 @@ func verfiyAttestationByValidatorAndBlock(validator int, blockSlot int) []bool {
 	res := []bool{}
 	for _, attestation := range (block.Data) {
 		if contains(attestation.Validators, validator) {
-			key := strconv.Itoa(attestation.Slot) + ":" + strconv.Itoa(attestation.Committeeindex)
-			if !mp[key] {
-				mp[key] = true
-			}
 			// get data root
 			signing_root := getSigningRoot2(attestation.Beaconblockroot[2:], attestation.Signature[2:], uint(attestation.Slot), uint(attestation.Committeeindex), uint(attestation.SourceEpoch), uint(attestation.TargetEpoch), attestation.SourceRoot[2:], attestation.TargetRoot[2:])
 			// get sig to verify
@@ -112,21 +110,8 @@ func verfiyAttestationByValidatorAndBlock(validator int, blockSlot int) []bool {
 			for _, idx := range attestation.Validators {
 				pks = append(pks, allValidators[idx][2:])
 			}
-			// pks = append(pks, "958391837758f8275e71bf34405d27a509ff1b7de4e7a53d87aa89dbb6800e0f100f57e9fd1a1c1b7f908c3860dfddb4")
-			
 			r := aggregateVerify(signing_root[:], pks, sig)
 			res = append(res, r)
-			// if r {
-			// 	fmt.Println(pks)
-			// }
-			// get pubkeys
-			// for idx, _ := range allValidators {
-				
-			// }
-			// res = append(res, r)
-			// if len(pks)==1 && !r {
-			// 	fmt.Println(validator, blockSlot)
-			// }
 		}
 	}
 	
@@ -145,13 +130,15 @@ func verifyAttestation(beaconBlockRoot string, sig string, slot uint, committeeI
 }
 
 func verifyAllAttestationInBlock(blockSlot int) []bool {
-	block := readBlockInfo("test/", uint(blockSlot))
+	folderPath := "test/"
+	if !blockInfoExist(folderPath, uint(blockSlot)) {
+		batchWriteBlockInfo(folderPath, []uint{uint(blockSlot)})
+	}
+	block := readBlockInfo(folderPath, uint(blockSlot))
 	res := []bool{}
 	for _, attestation := range (block.Data) {
-		key := strconv.Itoa(attestation.Slot) + ":" + strconv.Itoa(attestation.Committeeindex)
-		if !mp[key] {
-			mp[key] = true
-		}
+		// key := strconv.Itoa(attestation.Slot) + ":" + strconv.Itoa(attestation.Committeeindex)
+
 		// get data root
 		signing_root := getSigningRoot2(attestation.Beaconblockroot[2:], attestation.Signature[2:], uint(attestation.Slot), uint(attestation.Committeeindex), uint(attestation.SourceEpoch), uint(attestation.TargetEpoch), attestation.SourceRoot[2:], attestation.TargetRoot[2:])
 		// get sig to verify
@@ -160,27 +147,19 @@ func verifyAllAttestationInBlock(blockSlot int) []bool {
 		for _, idx := range attestation.Validators {
 			pks = append(pks, allValidators[idx][2:])
 		}
-		// pks = append(pks, "958391837758f8275e71bf34405d27a509ff1b7de4e7a53d87aa89dbb6800e0f100f57e9fd1a1c1b7f908c3860dfddb4")
-		
 		r := aggregateVerify(signing_root[:], pks, sig)
-		if !r{
-			fmt.Println(blockSlot, attestation.Signature)
-			
-		}
 		res = append(res, r)
 	}
 	
 	return res
 }
 
-func searchSinglePubKey(validator int, blockSlot int) {
+func searchSinglePubKey(validator int, blockSlot int) (int, string) {
 	block := readBlockInfo(blockInfoDataFolder, uint(blockSlot))
+	var idxRes int
+	var pkRes string
 	for _, attestation := range (block.Data) {
 		if contains(attestation.Validators, validator) {
-			key := strconv.Itoa(attestation.Slot) + ":" + strconv.Itoa(attestation.Committeeindex)
-			if !mp[key] {
-				mp[key] = true
-			}
 			// get data root
 			signing_root := getSigningRoot2(attestation.Beaconblockroot[2:], attestation.Signature[2:], uint(attestation.Slot), uint(attestation.Committeeindex), uint(attestation.SourceEpoch), uint(attestation.TargetEpoch), attestation.SourceRoot[2:], attestation.TargetRoot[2:])
 			// get sig to verify
@@ -194,7 +173,8 @@ func searchSinglePubKey(validator int, blockSlot int) {
 					r := aggregateVerify(signing_root[:], pks, sig)
 					if r {
 						wg.Done()
-						fmt.Println(idx, pubkey)
+						idxRes = idx
+						pkRes = pubkey
 					}
 				}(idx, pubkey)
 				
@@ -204,6 +184,8 @@ func searchSinglePubKey(validator int, blockSlot int) {
 			break	
 		}
 	}
+	return idxRes, pkRes
+
 	
 }
 
@@ -381,6 +363,12 @@ func removeDuplicateInt(intSlice []int) []int {
     return list
 }
 
+func verifyAllFromDrive() {
+	start := time.Now()
+	t()
+	fmt.Println(time.Since(start))
+}
+
 // 4219 608065 included_in: 608067 
 // 56119 608090
 // 0x958391837758f8275e71bf34405d27a509ff1b7de4e7a53d87aa89dbb6800e0f100f57e9fd1a1c1b7f908c3860dfddb4
@@ -402,9 +390,103 @@ func main() {
 	bls.SetETHmode(bls.EthModeDraft07)
 	
 	allValidators = getValidatorMap3()
-	mp = make(map[string]bool)
-	// batchWriteBlockInfo("test/", []uint{3})
-	// batchWriteBlockInfo("uninterested/", []uint{608065})
+	// mp = make(map[string]bool)
+
+	// Create the root command
+	rootCmd := &cobra.Command{
+		Use: "ss",
+	}
+
+	// Define a flag for the verbosity level
+	// verbosity := rootCmd.Flags().Int("verbosity", 0, "Verbosity level")
+
+	// Define a command for printing the command line arguments
+	argsCmd := &cobra.Command{
+		Use: "args",
+		Run: func(cmd *cobra.Command, args []string) {
+			// Print the command line arguments
+			fmt.Println("Arguments:")
+			for i, arg := range args {
+				fmt.Printf("  %d: %s\n", i, arg)
+			}
+		},
+	}
+
+
+	var blockId uint64
+	verifyAllAttestationInBlockCmd := &cobra.Command {
+		Use: "verify --blockId=<blockslot>",
+		Short: "verifyAllAttestationInBlock --blockId=<blockslot>",
+		Long: "verifyAllAttestationInBlock [blockid] if the block doesn't exist locally, fetch the block from beaconcha.in under test/ and verify",
+		Run: func(cmd *cobra.Command, args []string) {
+			fmt.Println(verifyAllAttestationInBlock(int(blockId)))
+		},
+	}
+	verifyAllAttestationInBlockCmd.Flags().Uint64Var(&blockId, "blockId", 0, "Required argument")
+	verifyAllAttestationInBlockCmd.MarkFlagRequired("blockId")
+
+	// Note currently only suport file in blockinfo folder, change to fetch later
+	var validatorIdx uint64
+	verifyAttestationByValidatorAndBlockCmd := &cobra.Command {
+		Use: "verify --valIdx=<validatorIdx> --blockId=<blockslot>",
+		Short: "verifyAllAttestationInBlock --blockId=<blockslot>",
+		Long: "verifyAllAttestationInBlock [blockid] if the block doesn't exist locally, fetch the block from beaconcha.in under test/ and verify",
+		Run: func(cmd *cobra.Command, args []string) {
+			fmt.Println(verfiyAttestationByValidatorAndBlock(int(validatorIdx), int(blockId)))
+		},
+	}
+	verifyAttestationByValidatorAndBlockCmd.Flags().Uint64Var(&blockId, "blockId", 0, "Required argument")
+	verifyAttestationByValidatorAndBlockCmd.Flags().Uint64Var(&validatorIdx, "valIdx", 0, "Required argument")
+	verifyAttestationByValidatorAndBlockCmd.MarkFlagRequired("blockId")
+	verifyAttestationByValidatorAndBlockCmd.MarkFlagRequired("valIdx")
+
+	
+	var typ string
+	checkCmd := &cobra.Command {
+		Use: "check --type=double|surround",
+		Short: "check --type=double|surround",
+		Long: "check for interested blocks in potential double vote / surround vote detected from beaconcha.in",
+		Run: func(cmd *cobra.Command, args []string) {
+			switch typ {
+			case "double":
+				checkDoubleVoteWithLocalData()
+			case "surround":
+				checkSurroundVoteWithLocalData()
+			}
+
+		},
+	}
+	checkCmd.Flags().StringVar(&typ, "blockId", "", "Required argument")
+	checkCmd.MarkFlagRequired("typ")
+
+	searchCmd := &cobra.Command {
+		Use: "search --valIdx=<validatorIdx> --blockId=<blockId>",
+		Short: "search --valIdx=<validatorIdx> --blockId=<blockId>",
+		Long: "brute-force search for correct signer for sinlge validator case",
+		Run: func(cmd *cobra.Command, args []string) {
+			idx, pubkey := searchSinglePubKey(int(validatorIdx), int(blockId))
+			fmt.Println(idx, pubkey)
+		},
+	}
+
+	searchCmd.Flags().Uint64Var(&blockId, "blockId", 0, "Required argument")
+	searchCmd.Flags().Uint64Var(&validatorIdx, "valIdx", 0, "Required argument")
+	searchCmd.MarkFlagRequired("blockId")
+	searchCmd.MarkFlagRequired("valIdx")
+
+
+
+
+	rootCmd.AddCommand(argsCmd)
+	rootCmd.AddCommand(verifyAllAttestationInBlockCmd)
+	rootCmd.AddCommand(verifyAttestationByValidatorAndBlockCmd)
+	rootCmd.AddCommand(checkCmd)
+	rootCmd.AddCommand(searchCmd)
+
+
+	// Parse the command line flags and arguments
+	rootCmd.Execute()
+	
 	// checkDoubleVoteWithLocalData()
 	// a := []int{1041108, 1041109, 1041117}
 	// for _, v := range a{
@@ -413,9 +495,7 @@ func main() {
 	// }
 	// verfiyAttestationByValidatorAndBlock()
 	// verifyAllAttestationInBlock(3)
-	start := time.Now()
-	t()
-	fmt.Println(time.Since(start))
+	
 	
 	
 

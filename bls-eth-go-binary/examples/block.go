@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"time"
 )
 
@@ -50,6 +51,22 @@ func batchWriteBlockInfo(folderPath string, blocks []uint){
 	}
 }
 
+func blockInfoExist(folderPath string, blockSlot uint) bool {
+	// Check if the file exists
+	_, err := os.Stat(folderPath + fmt.Sprintf("%s%d.json", blockInfoFilePrefix, blockSlot))
+	if err != nil {
+		if os.IsNotExist(err) {
+			// The file does not exist
+			return false
+		}
+		// Other error occurred
+		panic(err)
+	}
+
+	// The file exists
+	return true
+}
+
 func readBlockInfo(folderPath string, blockSlot uint) BlockAttestationsRes {
 	file, _ := ioutil.ReadFile(folderPath + fmt.Sprintf("%s%d.json", blockInfoFilePrefix, blockSlot))
  
@@ -59,6 +76,7 @@ func readBlockInfo(folderPath string, blockSlot uint) BlockAttestationsRes {
 	return data
 }
 
+// Should be deprecated
 func readBlockInfo2(folderPath string, blockSlot uint) BlockAttestationsRes {
 	file, _ := ioutil.ReadFile(folderPath + fmt.Sprintf("%s%d.json", blockInfoFilePrefix2, blockSlot))
  
