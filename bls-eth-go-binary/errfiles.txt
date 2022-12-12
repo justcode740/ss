@@ -1,0 +1,35 @@
+ERR beaconchain_attestation_430000.csv
+ERR beaconchain_attestation_480000.csv
+ERR beaconchain_attestation_475000.csv
+ERR beaconchain_attestation_190000.csv
+ERR beaconchain_attestation_340000.csv
+ERR beaconchain_attestation_640000.csv
+ERR beaconchain_attestation_605000.csv
+ERR beaconchain_attestation_585000.csv
+ERR beaconchain_attestation_610000.csv
+ERR beaconchain_attestation_645000.csv
+ERR beaconchain_attestation_1490000.csv
+ERR beaconchain_attestation_1505000.csv
+ERR beaconchain_attestation_1310000.csv
+ERR beaconchain_attestation_1525000.csv
+ERR beaconchain_attestation_1500000.csv
+ERR beaconchain_attestation_1000000.csv
+ERR beaconchain_attestation_1575000.csv                    uninterested
+ERR beaconchain_attestation_1005000.csv                    validatorinfo
+ERR beaconchain_attestation_1570000.csv
+ERR beaconchain_attestation_1390000.csv
+ERR beaconchain_attestation_1065000.csv
+ERR beaconchain_attestation_750000.csv
+ERR beaconchain_attestation_1060000.csv
+ERR beaconchain_attestation_1600000.csv
+ERR beaconchain_attestation_1080000.csv
+ERR beaconchain_attestation_1435000.csv
+ERR beaconchain_attestation_885000.csvv
+ERR beaconchain_attestation_960000.csv
+ERR beaconchain_attestation_1635000.csv
+ERR beaconchain_attestation_1655000.csv
+ERR beaconchain_attestation_1450000.csv
+ERR beaconchain_attestation_1460000.csv
+ERR beaconchain_attestation_1705000.csv
+ERR beaconchain_attestation_1480000.csv
+ERR beaconchain_attestation_1475000.csv
