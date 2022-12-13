@@ -2,6 +2,7 @@ package main
 
 import (
 	// "context"
+	// "bufio"
 	"context"
 	"sort"
 	"strconv"
@@ -23,11 +24,11 @@ import (
 	"log"
 
 	"github.com/360EntSecGroup-Skylar/excelize/v2"
+	"github.com/cenkalti/backoff/v4"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
-	"google.golang.org/api/drive/v3"
-	"github.com/cenkalti/backoff/v4"
 	"golang.org/x/sync/semaphore"
+	"google.golang.org/api/drive/v3"
 )
 func t(){
 	
@@ -60,7 +61,24 @@ func t(){
 	// Get all files name and sort 
 	allFiles := getFiles(srv, folderID)
 
-	alreadyProcessed := []int{5000, 10000, 15000, 35000}
+	// alreadyProcessed := []int{5000, 10000, 15000, 35000}
+	// errFiles := 
+	file, err := os.Open("largefile.txt")
+    if err != nil {
+        log.Fatal(err)
+    }
+    defer file.Close()
+
+    // scanner := bufio.NewScanner(file)
+    // optionally, resize scanner's capacity for lines over 64K, see next example
+	errfilesNumber := []int{1505000, 1575000}
+    // for scanner.Scan() {
+	// 	str:=strings.Split(strings.Split(scanner.Text(), ".")[0], "_")[2]
+	// 	val, _ := strconv.Atoi(str)
+	// 	errfilesNumber =  append(errfilesNumber, val)
+    // }
+	fmt.Println(errfilesNumber)
+
 	// ERR beaconchain_attestation_430000.csv
 	// ERR beaconchain_attestation_480000.csv
 	// ERR beaconchain_attestation_475000.csv
@@ -72,21 +90,25 @@ func t(){
 	// ERR beaconchain_attestation_610000.csv
 	// strange 84 1FMuyGeOkEvzOEtQEJ6bqO3bkhxRsSYvi Get "https://www.googleapis.com/drive/v3/files/1FMuyGeOkEvzOEtQEJ6bqO3bkhxRsSYvi?alt=media&prettyPrint=false": read tcp 192.168.171.97:51202->142.250.65.234:443: read: connection timed out
 	// ERR beaconchain_attestation_645000.csv
-
+	
 	// Only consider first 1.75mm 1750000
 	files := []*drive.File{}
 	for _, file := range allFiles {
 		blockSlot, _ := strconv.ParseInt(strings.Split(strings.Split(file.Name, ".")[0], "_")[2], 10, 64)
-		if contains(alreadyProcessed, int(blockSlot)) {continue}
-		if blockSlot < 645000 {continue}
+		// if contains(alreadyProcessed, int(blockSlot)) {continue}
+		// if blockSlot < 645000 {continue}
 		if blockSlot > 1750000 {		
 			break
 		}
-		files = append(files, file)
+		if contains(errfilesNumber, int(blockSlot)){
+			files = append(files, file)
+		}
 	}
+	fmt.Println(files)
+	// nonParallel(files)
 	
 	var outWg sync.WaitGroup
-	sem := semaphore.NewWeighted(5)
+	sem := semaphore.NewWeighted(1)
 	for _, f := range files {
 			outWg.Add(1)
 			go func (f *drive.File) {
@@ -174,9 +196,21 @@ func t(){
 							sourceRoot := row[9]
 							targetEpoch, _ := strconv.ParseUint(row[10], 10, 64)
 							targetRoot := row[11]
-							validators := strtouints(strings.Trim(row[12], "{}"))
+							// fmt.Println("ow", row[12])
+							var validators []int
+							if row[12][0]=='{'{
+								validators = strtouints(strings.Trim(row[12], "{}"))
+							}else if row[12][0]=='['{
+								validators = strtouints(strings.Trim(row[12], "\\[\\]"))
+							}else{
+								fmt.Println(row[12])
+								fmt.Println("")
+							}
+							
+							// fmt.Println(bbr, sig, slot, cidx, sourceEpoch, targetEpoch, sourceRoot, targetRoot, validators)
 	
 							val := verifyAttestation(bbr, sig, uint(slot), uint(cidx), uint(sourceEpoch), uint(targetEpoch), sourceRoot, targetRoot, validators)
+							// fmt.Println(val)
 							if !val {
 								mutex.Lock()
 								falseRows = append(falseRows, row)
@@ -192,6 +226,7 @@ func t(){
 	
 					// write false rows to a file
 					writeResultToCSV(falseRows, f.Name)
+					
 				}else{
 					panic(fmt.Sprintf("get a file with unknown suffix %s", f.Name))
 				}
@@ -204,8 +239,14 @@ func t(){
 
 
 func writeResultToCSV(rows [][]string, fileName string){
+	newfileName := fmt.Sprintf("verificationResult/%s.csv", strings.Split(fileName, ".")[0])
+	if _, err := os.Stat(newfileName); err == nil {
+		// if file exist, delete it
+		os.Remove(fileName)
+	}
 	// Open a file for writing
-	output, err := os.Create(fmt.Sprintf("verificationResult/%s.csv", strings.Split(fileName, ".")[0]))
+	output, err := os.Create(newfileName)
+	
 	if err != nil {
 		panic(err)
 	}
@@ -225,6 +266,7 @@ func writeResultToCSV(rows [][]string, fileName string){
 }
 
 func strtouints(str string) []int{
+	// fmt.Println("enter", str)
 	strs := strings.Split(str, ",")
 	// Convert the strings to uint values
 	var ints []int
@@ -235,6 +277,7 @@ func strtouints(str string) []int{
 		}
 		ints = append(ints, int(u))
 	}
+	// fmt.Println("out", ints)
 	return ints
 }
 
