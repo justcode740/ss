@@ -5,6 +5,8 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+
 	// "log"
 	"sync"
 
@@ -97,9 +99,10 @@ func aggregateVerify(msg []byte, rawPks []string, sigToVerify string) bool {
 }
 
 
-func verfiyAttestationByValidatorAndBlock(validator int, blockSlot int) []bool {
+func verfiyAttestationByValidatorAndBlock(validator int, blockSlot int) ([]bool, []string) {
 	block := readBlockInfo(blockInfoDataFolder, uint(blockSlot))
 	res := []bool{}
+	sigs := []string{}
 	for _, attestation := range (block.Data) {
 		if contains(attestation.Validators, validator) {
 			// get data root
@@ -112,10 +115,11 @@ func verfiyAttestationByValidatorAndBlock(validator int, blockSlot int) []bool {
 			}
 			r := aggregateVerify(signing_root[:], pks, sig)
 			res = append(res, r)
+			sigs = append(sigs, attestation.Signature)
 		}
 	}
 	
-	return res
+	return res, sigs
 }
 
 func verifyAttestation(beaconBlockRoot string, sig string, slot uint, committeeIdx uint, sourceEpoch uint, targetEpoch uint, sourceRoot string, targetRoot string, validators []int) bool {
@@ -166,8 +170,10 @@ func searchSinglePubKey(validator int, blockSlot int) (int, string) {
 			sig := attestation.Signature[2:]
 			var wg sync.WaitGroup
 			wg.Add(1)
+			found:=false
 			for idx, pubkey := range allValidators{
 				go func(idx int, pubkey string) {
+					if found {return}
 					var pks []string
 					pks = append(pks, pubkey[2:])
 					r := aggregateVerify(signing_root[:], pks, sig)
@@ -175,6 +181,8 @@ func searchSinglePubKey(validator int, blockSlot int) (int, string) {
 						wg.Done()
 						idxRes = idx
 						pkRes = pubkey
+						fmt.Println(sig, idx, pubkey)
+						found = true
 					}
 				}(idx, pubkey)
 				
@@ -219,15 +227,15 @@ func checkExcel() {
 		fmt.Println()
 	}
 }
-
+var c map[string]bool
 func checkDoubleVoteWithLocalData(){
 	f, err := excelize.OpenFile("./data/unslashed_double_votes.xlsx")
 	if err!=nil {
 		fmt.Println(err)
 	}
+	fmt.Println("dd")
 
 	defer f.Close()
-	
 	// 405
 	for i := 2; i < 406; i++ {
 		idx := strconv.Itoa(i)
@@ -243,17 +251,26 @@ func checkDoubleVoteWithLocalData(){
 		// c, t, f:=0,0,0
 		
 		for _, blockSlot := range blocks {
-			res := verfiyAttestationByValidatorAndBlock(validator, blockSlot)
-			for _, r:= range res {
-				fmt.Print(strconv.FormatBool(r)+"  ")
+			res, sigs := verfiyAttestationByValidatorAndBlock(validator, blockSlot)
+			for i:=0; i <len(res) ; i++{
+				if !res[i] {
+					c[sigs[i]] = true
+				}
+				fmt.Print(strconv.FormatBool(res[i])+"  ")
 			}
+			
 		}
 		fmt.Println()
 	}
+	fmt.Println(len(c))
 	// file, _ := json.MarshalIndent(mp, "", " ")
 	// _ = ioutil.WriteFile("slot:committeeIdx.json", file, 0644)
 	
 }
+
+// func key(committeeIdx int, slot int) string {
+// 	strconv.FormatInt(slot, 10) + ":" + strconv
+// }
 
 func checkSurroundVoteWithLocalData(){
 	f, err := os.Open("./data/surround_vote")
@@ -274,9 +291,12 @@ func checkSurroundVoteWithLocalData(){
 		vals := strings.Fields(scanner.Text())
 		idx, _ := strconv.Atoi(vals[0])
 		blockslot, _ := strconv.Atoi(vals[1])
-		res := verfiyAttestationByValidatorAndBlock(idx, blockslot)
-        for _, r:= range res {
-			fmt.Print(strconv.FormatBool(r)+"  ")
+		res, sigs := verfiyAttestationByValidatorAndBlock(idx, blockslot)
+        for i:=0; i <len(res) ; i++{
+			if !res[i] {
+				c[sigs[i]] = true
+			}
+			fmt.Print(strconv.FormatBool(res[i])+"  ")
 		}
 		fmt.Println()
     }
@@ -284,6 +304,7 @@ func checkSurroundVoteWithLocalData(){
     if err := scanner.Err(); err != nil {
         panic(err)
     }
+	fmt.Println(len(c))
 }
 
 func checkalgo(){
@@ -369,6 +390,240 @@ func verifyAllFromDrive() {
 	fmt.Println(time.Since(start))
 }
 
+func allFalseAttestations() {
+	items, _ := ioutil.ReadDir("verificationResult")
+	c:=0
+	f, _ := os.Create("allFalse.txt")
+    defer f.Close()
+
+	for _, item := range items {
+		fileLoc := "verificationResult/" + item.Name()
+		readFile, err := os.Open(fileLoc)
+  
+    	if err != nil {
+        	fmt.Println(err)
+   	 	}
+    	fileScanner := bufio.NewScanner(readFile)
+ 
+    	fileScanner.Split(bufio.ScanLines)
+  
+    	for fileScanner.Scan() {
+			c++
+    	    // fmt.Println(fileScanner.Text())
+			f.WriteString(fileScanner.Text())
+			f.WriteString("\n")
+    	}
+  
+    	readFile.Close()
+		
+	}
+	fmt.Println(c)
+}
+
+func fetchepochs(interestedBlock int) {
+	start := time.Now()
+	blocks := []uint{}
+	startBlock := (interestedBlock / 32) * 32
+	for block := startBlock; block < startBlock + 32; block++{
+		blocks = append(blocks, uint(block))
+	}
+	batchWriteBlockInfo("epochs/", blocks)
+	fmt.Println(time.Since(start))
+
+}
+
+type Schedule struct {
+	Data []struct {
+		Index      string   `json:"index"`
+		Slot       string   `json:"slot"`
+		Validators []string `json:"validators"`
+	} `json:"data"`
+	ExecutionOptimistic bool `json:"execution_optimistic"`
+}
+
+func unvotedValidators(interestedBlock int) []int {
+	// epoch's blocks under epochs/, committee schedule under schedule/
+	file, _ := ioutil.ReadFile(fmt.Sprintf("schedule/%d.json", interestedBlock))
+	var schedule Schedule
+	_  = json.Unmarshal([]byte(file), &schedule)
+	allValidators := map[int]bool{}
+	for _, val := range schedule.Data {
+		for _, validator := range val.Validators{
+			idx, _ := strconv.Atoi(validator)
+			if _, exist := allValidators[idx]; !exist{
+				allValidators[idx] = true
+			}
+		}
+	}
+	// based on block_slot search the schedule
+	// unique validators in that epoch
+	votedValidators := map[int]bool{}
+	startBlock := (interestedBlock / 32) * 32
+	for block := startBlock; block < startBlock + 32; block++{
+		atts := readBlockInfo("epochs/", uint(block))
+		for _, val := range atts.Data {
+			for _, idx := range val.Validators {
+				if idx == 21955 {
+					fmt.Println(val)
+					os.Exit(0)
+				}
+				if _, exist := votedValidators[idx]; !exist{
+					votedValidators[idx]=true
+				}
+			}
+		}
+	}
+
+	unvotedValidators := []int{}
+	for k := range allValidators {
+		if _, voted := votedValidators[k]; !voted {
+			unvotedValidators = append(unvotedValidators, k)
+		}
+	}
+
+	fmt.Println(len(allValidators), len(votedValidators))
+	fmt.Println(len(unvotedValidators))
+	fmt.Println(contains(unvotedValidators, 56119))
+	return unvotedValidators
+
+	// search all voted validators in that epoch by traverse files epoch/
+	
+
+}
+
+func smartSearchPubkeys(interestedBlock int) {
+	searchSpace := unvotedValidators(interestedBlock)
+
+	// traverse all false att, correct each by brute force search space
+	readFile, _ := os.Open("allFalse.txt")
+	fileScanner := bufio.NewScanner(readFile)
+ 
+    fileScanner.Split(bufio.ScanLines)
+
+	f, _ := os.Create(fmt.Sprintf("correction/%d.txt", interestedBlock))
+    defer f.Close()
+  
+	for fileScanner.Scan() {
+		fa := fileScanner.Text()
+		row := strings.Split(fa, ",")
+		blockslot, _:=strconv.ParseUint(row[4], 10, 64)
+		if blockslot != uint64(interestedBlock)  {continue}
+
+		bbr := row[1]
+		sig := row[6]
+		slot, _ := strconv.ParseUint(row[7], 10, 64)
+		
+		cidx, _ := strconv.ParseUint(row[5], 10, 64)
+		sourceEpoch, _ := strconv.ParseUint(row[8], 10, 64)
+		sourceRoot := row[9]
+		targetEpoch, _ := strconv.ParseUint(row[10], 10, 64)
+		targetRoot := row[11]
+		if row[12][0]=='"' {
+			row[12] = strings.Trim(row[12], "\"\"")
+		}
+		validators := strtouints(strings.Trim(row[12], "\\[\\]"))
+		// fmt.Println(validators)
+
+		// get data root
+		signing_root := getSigningRoot2(bbr[2:], sig[2:], uint(slot), uint(cidx), uint(sourceEpoch), uint(targetEpoch), sourceRoot[2:], targetRoot[2:])
+		// fmt.Println(signing_root)
+		// get sig to verify
+		sig = sig[2:]
+
+
+		if len(validators) == 1 {
+			// searchSinglePubKey(validators[0], interestedBlock)
+			for _, valIdx := range searchSpace{
+					pubkey := allValidators[valIdx]
+					var pks []string
+					pks = append(pks, pubkey[2:])
+					r := aggregateVerify(signing_root[:], pks, sig)
+					if r {
+						fmt.Println(pubkey)
+						f.WriteString(fmt.Sprintf("%s, %d, %s", sig, valIdx, pubkey))
+						
+						
+						
+					}
+			
+			}
+		}
+	}
+  
+    readFile.Close()
+
+	
+	
+}
+
+func bruteforceSearch() {
+	readFile, _ := os.Open("allFalse.txt")
+	fileScanner := bufio.NewScanner(readFile)
+ 
+    fileScanner.Split(bufio.ScanLines)
+
+	f, _ := os.Create("correction/all.txt")
+    defer f.Close()
+  
+	for fileScanner.Scan() {
+		fa := fileScanner.Text()
+		i := strings.Index(fa, "\"")
+		row := strings.Split(fa, ",")
+
+		var validators []int
+		if i > -1 {
+			validatorsstr := fa[i+1:len(fa)-1]
+			validators = strtouints(strings.Trim(validatorsstr, "\\[\\]"))
+		}else{
+			validators = strtouints(strings.Trim(row[12], "\\[\\]"))
+		}
+		bbr := row[1]
+		sig := row[6]
+		slot, _ := strconv.ParseUint(row[7], 10, 64)
+		
+		cidx, _ := strconv.ParseUint(row[5], 10, 64)
+		sourceEpoch, _ := strconv.ParseUint(row[8], 10, 64)
+		sourceRoot := row[9]
+		targetEpoch, _ := strconv.ParseUint(row[10], 10, 64)
+		targetRoot := row[11]
+		
+		// get data root
+		signing_root := getSigningRoot2(bbr[2:], sig[2:], uint(slot), uint(cidx), uint(sourceEpoch), uint(targetEpoch), sourceRoot[2:], targetRoot[2:])
+		// fmt.Println(signing_root)
+		// get sig to verify
+		sig = sig[2:]
+		// only search for 1-val case
+		if len(validators)==1{
+			fmt.Println(fmt.Sprintf("search for validator %d", validators[0]))
+			found := false
+			var wg sync.WaitGroup
+			wg.Add(1)
+			for idx, pubkey := range allValidators{
+				go func(valIdx int, pubkey string) {
+					if found { return }
+					var pks []string
+					pks = append(pks, pubkey[2:])
+					r := aggregateVerify(signing_root[:], pks, sig)
+					if r {
+						f.WriteString(fmt.Sprintf("%s, %d, %s\n", sig, valIdx, pubkey))
+						fmt.Println(sig, valIdx, pubkey)
+						found = true
+						wg.Done()
+					}
+				}(idx, pubkey)
+				
+
+			}
+			wg.Wait()
+		
+		}
+		
+
+
+	}
+	readFile.Close()
+}
+
 // 4219 608065 included_in: 608067 
 // 56119 608090
 // 0x958391837758f8275e71bf34405d27a509ff1b7de4e7a53d87aa89dbb6800e0f100f57e9fd1a1c1b7f908c3860dfddb4
@@ -390,6 +645,7 @@ func main() {
 	bls.SetETHmode(bls.EthModeDraft07)
 	
 	allValidators = getValidatorMap3()
+	c = map[string]bool{}
 	// mp = make(map[string]bool)
 
 	// Create the root command
@@ -451,11 +707,13 @@ func main() {
 				checkDoubleVoteWithLocalData()
 			case "surround":
 				checkSurroundVoteWithLocalData()
+			case "both":
+				checkDoubleVoteWithLocalData()
+				checkSurroundVoteWithLocalData()
 			}
-
 		},
 	}
-	checkCmd.Flags().StringVar(&typ, "blockId", "", "Required argument")
+	checkCmd.Flags().StringVar(&typ, "type", "", "Required argument")
 	checkCmd.MarkFlagRequired("typ")
 
 	searchCmd := &cobra.Command {
@@ -481,6 +739,60 @@ func main() {
 		},
 	}
 
+	allFalseAttestationCmd := &cobra.Command {
+		Use: "allFalse",
+		Short: "fetch from google drive and verify all atts for all blocks, output failed verification to verificationResult/",
+		Long: "fetch from google drive and verify all atts",
+		Run: func(cmd *cobra.Command, args []string) {
+			allFalseAttestations()
+		},
+	}
+
+	fetchEpochByInterestedBlockCmd := &cobra.Command {
+		Use: "fetch epoch for interested block",
+		Short: "fetch epoch for interested block under epochs/",
+		Long: "fetch epoch for interested block under epochs/",
+		Run: func(cmd *cobra.Command, args []string) {
+			fetchepochs(608067)
+		},
+	}
+
+	unvotedValidatorsCmd := &cobra.Command {
+		Use: "unvote validators in epoch defined by interested block",
+		Short: "unvote validators in epoch defined by interested block",
+		Long: "unvote validators in epoch defined by interested block",
+		Run: func(cmd *cobra.Command, args []string) {
+			unvotedValidators(608067)
+		},
+	}
+	smartSearchCmd := &cobra.Command {
+		Use: "ss validators in epoch defined by interested block",
+		Short: "ss validators in epoch defined by interested block",
+		Long: "ss validators in epoch defined by interested block",
+		Run: func(cmd *cobra.Command, args []string) {
+			smartSearchPubkeys(608067)
+		},
+	}
+	signingRootCmd := &cobra.Command {
+		Use: "sr validators in epoch defined by interested block",
+		Short: "sr validators in epoch defined by interested block",
+		Long: "sr validators in epoch defined by interested block",
+		Run: func(cmd *cobra.Command, args []string) {
+			getSigningRoot()
+		},
+	}
+	bfPubkeyCmd := &cobra.Command {
+		Use: "bf validators in epoch defined by interested block",
+		Short: "bf validators in epoch defined by interested block",
+		Long: "bf validators in epoch defined by interested block",
+		Run: func(cmd *cobra.Command, args []string) {
+			start := time.Now()
+			bruteforceSearch()
+			fmt.Println(time.Since(start))
+
+		},
+	}
+	
 
 	rootCmd.AddCommand(argsCmd)
 	rootCmd.AddCommand(verifyAllAttestationInBlockCmd)
@@ -488,9 +800,24 @@ func main() {
 	rootCmd.AddCommand(checkCmd)
 	rootCmd.AddCommand(searchCmd)
 	rootCmd.AddCommand(verifyAllCmd)
+	rootCmd.AddCommand(allFalseAttestationCmd)
+	rootCmd.AddCommand(fetchEpochByInterestedBlockCmd)
+	rootCmd.AddCommand(unvotedValidatorsCmd)
+	rootCmd.AddCommand(smartSearchCmd)
+	rootCmd.AddCommand(signingRootCmd)
+	rootCmd.AddCommand(bfPubkeyCmd)
+
+
+	
+
 
 	// Parse the command line flags and arguments
 	rootCmd.Execute()
+
+	
+
+
+	
 	
 	// checkDoubleVoteWithLocalData()
 	// a := []int{1041108, 1041109, 1041117}

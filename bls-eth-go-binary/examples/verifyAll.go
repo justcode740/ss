@@ -277,7 +277,6 @@ func strtouints(str string) []int{
 		}
 		ints = append(ints, int(u))
 	}
-	// fmt.Println("out", ints)
 	return ints
 }
 

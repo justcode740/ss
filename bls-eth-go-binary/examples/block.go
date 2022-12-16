@@ -38,7 +38,7 @@ func writeBlockInfo(){
 	}
 }
 
-func batchWriteBlockInfo(folderPath string, blocks []uint){
+func batchWriteBlockInfo(folderPath string, blocks []uint) {
 	eth2Client := newEth2Client()
 	for i := 0; i < len(blocks); i++ {
 		// every 10 req, wait 1 min

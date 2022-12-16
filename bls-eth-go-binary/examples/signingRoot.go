@@ -54,6 +54,7 @@ func getSigningRoot() [32]byte {
 		panic(err)
 	}
 
+
 	return signing_root
 }
 
