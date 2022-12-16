@@ -561,9 +561,11 @@ func bruteforceSearch() {
 	fileScanner := bufio.NewScanner(readFile)
  
     fileScanner.Split(bufio.ScanLines)
-
-	f, _ := os.Create("correction/all.txt")
+	
+	f, _ := os.Create(fmt.Sprintf("correction/all%s.txt", time.Now().String()))
     defer f.Close()
+
+	c := 0
   
 	for fileScanner.Scan() {
 		fa := fileScanner.Text()
@@ -594,6 +596,7 @@ func bruteforceSearch() {
 		sig = sig[2:]
 		// only search for 1-val case
 		if len(validators)==1{
+			c++
 			fmt.Println(fmt.Sprintf("search for validator %d", validators[0]))
 			found := false
 			var wg sync.WaitGroup
@@ -615,6 +618,9 @@ func bruteforceSearch() {
 
 			}
 			wg.Wait()
+			if !found {
+				fmt.Println(validators)
+			}
 		
 		}
 		
@@ -622,6 +628,7 @@ func bruteforceSearch() {
 
 	}
 	readFile.Close()
+	fmt.Println(c)
 }
 
 // 4219 608065 included_in: 608067 
