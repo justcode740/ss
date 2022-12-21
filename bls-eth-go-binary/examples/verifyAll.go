@@ -239,7 +239,7 @@ func t(){
 
 
 func writeResultToCSV(rows [][]string, fileName string){
-	newfileName := fmt.Sprintf("verificationResult/%s.csv", strings.Split(fileName, ".")[0])
+	newfileName := fmt.Sprintf("duplicateVoteResult/%s.csv", strings.Split(fileName, ".")[0])
 	if _, err := os.Stat(newfileName); err == nil {
 		// if file exist, delete it
 		os.Remove(fileName)
@@ -264,6 +264,7 @@ func writeResultToCSV(rows [][]string, fileName string){
 	// Flush the buffered data to the file
 	writer.Flush()
 }
+
 
 func strtouints(str string) []int{
 	// fmt.Println("enter", str)

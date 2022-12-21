@@ -799,6 +799,19 @@ func main() {
 
 		},
 	}
+
+	duplicateVoteCmd := &cobra.Command {
+		Use: "dv validators in epoch defined by interested block",
+		Short: "dv validators in epoch defined by interested block",
+		Long: "dv validators in epoch defined by interested block",
+		Run: func(cmd *cobra.Command, args []string) {
+			start := time.Now()
+			searchDuplicateVote()
+			fmt.Println(time.Since(start))
+
+		},
+	}
+	
 	
 
 	rootCmd.AddCommand(argsCmd)
@@ -813,8 +826,7 @@ func main() {
 	rootCmd.AddCommand(smartSearchCmd)
 	rootCmd.AddCommand(signingRootCmd)
 	rootCmd.AddCommand(bfPubkeyCmd)
-
-
+	rootCmd.AddCommand(duplicateVoteCmd)
 	
 
 
