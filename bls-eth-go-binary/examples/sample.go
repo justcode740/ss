@@ -773,9 +773,9 @@ func main() {
 		},
 	}
 	smartSearchCmd := &cobra.Command {
-		Use: "ss validators in epoch defined by interested block",
-		Short: "ss validators in epoch defined by interested block",
-		Long: "ss validators in epoch defined by interested block",
+		Use: "ss smart search pubkey for correct signing validator sets",
+		Short: "ss smart search pubkey for correct signing validator sets",
+		Long: "ss smart search pubkey for correct signing validator sets",
 		Run: func(cmd *cobra.Command, args []string) {
 			smartSearchPubkeys(608067)
 		},
@@ -789,9 +789,9 @@ func main() {
 		},
 	}
 	bfPubkeyCmd := &cobra.Command {
-		Use: "bf validators in epoch defined by interested block",
-		Short: "bf validators in epoch defined by interested block",
-		Long: "bf validators in epoch defined by interested block",
+		Use: "bf brufeforce search pubkey for each 1-val case",
+		Short: "bf brufeforce search pubkey for each 1-val case",
+		Long: "bf brufeforce search pubkey for each 1-val case",
 		Run: func(cmd *cobra.Command, args []string) {
 			start := time.Now()
 			bruteforceSearch()
@@ -801,12 +801,24 @@ func main() {
 	}
 
 	duplicateVoteCmd := &cobra.Command {
-		Use: "dv validators in epoch defined by interested block",
-		Short: "dv validators in epoch defined by interested block",
-		Long: "dv validators in epoch defined by interested block",
+		Use: "dv duplicated vote for same target epoch with diff data",
+		Short: "dv duplicated vote for same target epoch with diff data",
+		Long: "dv duplicated vote for same target epoch with diff data",
 		Run: func(cmd *cobra.Command, args []string) {
 			start := time.Now()
 			searchDuplicateVote()
+			fmt.Println(time.Since(start))
+
+		},
+	}
+
+	correctionCmd := &cobra.Command {
+		Use: "show correction map",
+		Short: "show correction map",
+		Long: "show correction map",
+		Run: func(cmd *cobra.Command, args []string) {
+			start := time.Now()
+			fmt.Println(readCorrection())
 			fmt.Println(time.Since(start))
 
 		},
@@ -827,7 +839,7 @@ func main() {
 	rootCmd.AddCommand(signingRootCmd)
 	rootCmd.AddCommand(bfPubkeyCmd)
 	rootCmd.AddCommand(duplicateVoteCmd)
-	
+	rootCmd.AddCommand(correctionCmd)
 
 
 	// Parse the command line flags and arguments

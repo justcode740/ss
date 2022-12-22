@@ -23,7 +23,25 @@ import (
 )
 
 const window = 500
+
+type Data struct {
+	slot int
+	cidx int
+	bbr string
+	source_epoch int
+	source_root string
+	target_epoch int 
+	target_root string
+}
+
+func (d Data) String() string {
+	return fmt.Sprintf("%d,%d,%s,%d,%s,%d,%s", d.slot, d.cidx, d.bbr, d.source_epoch, d.source_root, d.target_epoch, d.target_root)
+}
+
 func searchDuplicateVote(){
+
+	// fetch correction
+	correction := readCorrection()
 	
 	// https://docs.google.com/spreadsheets/d/1mDPwQMA1K7nFbRfkBKXsiv1jgI3KTDVz/edit?usp=share_link&ouid=115469787324806160501&rtpof=true&sd=true
 
@@ -65,15 +83,7 @@ func searchDuplicateVote(){
 		
 	}
 
-	type Data struct {
-		slot int
-		cidx int
-		bbr string
-		source_epoch int
-		source_root string
-		target_epoch int 
-		target_root string
-	}
+	
 	
 	for _, f := range files {
 		// targetEpoch -> validator idx -> Data
@@ -90,6 +100,7 @@ func searchDuplicateVote(){
 			for i := 1; i < len(records); i++{
 				row := records[i]
 				bbr := row[1]
+				sig := row[6]
 				slot, _ := strconv.ParseUint(row[7], 10, 64)
 				cidx, _ := strconv.ParseUint(row[5], 10, 64)
 				sourceEpoch, _ := strconv.ParseUint(row[8], 10, 64)
@@ -106,12 +117,20 @@ func searchDuplicateVote(){
 					target_epoch: int(targetEpoch),
 					target_root: targetRoot,
 				}
+				if idx, exist := correction[sig]; exist {
+					validators = []int{idx}
+				}
 				for _, valIdx := range validators {
 					if val, exist := idxmap[int(targetEpoch)][valIdx]; exist{
 						if val != data {
 							// double vote detected
-							// validx, targetepoch, slot1, slot2
-							res := []string{strconv.FormatInt(int64(valIdx),10), strconv.FormatInt(int64(targetEpoch), 10), strconv.FormatInt(int64(val.slot), 10), strconv.FormatInt(int64(slot), 10)}
+							// validx, targetepoch, data1, data2
+							res := []string{
+								strconv.FormatInt(int64(valIdx),10), 
+								strconv.FormatInt(int64(targetEpoch), 10), 
+								val.String(), 
+								data.String(),
+							}
 							rows = append(rows, res)
 						}
 					}else{
@@ -157,6 +176,7 @@ func searchDuplicateVote(){
 				}
 				
 				bbr := row[1]
+				sig := row[6]
 				slot, _ := strconv.ParseUint(row[7], 10, 64)
 				cidx, _ := strconv.ParseUint(row[5], 10, 64)
 				sourceEpoch, _ := strconv.ParseUint(row[8], 10, 64)
@@ -174,6 +194,10 @@ func searchDuplicateVote(){
 					fmt.Println("")
 				}
 
+				if idx, exist := correction[sig]; exist {
+					validators = []int{idx}
+				}
+
 				data := Data {
 					slot: int(slot),
 					cidx: int(cidx),
@@ -187,8 +211,13 @@ func searchDuplicateVote(){
 					if val, exist := idxmap[int(targetEpoch)][valIdx]; exist{
 						if val != data {
 							// double vote detected
-							// validx, targetepoch, slot1, slot2
-							res := []string{strconv.FormatInt(int64(valIdx),10), strconv.FormatInt(int64(targetEpoch), 10), strconv.FormatInt(int64(val.slot), 10), strconv.FormatInt(int64(slot), 10)}
+							// validx, targetepoch, data1, data2
+							res := []string{
+								strconv.FormatInt(int64(valIdx),10), 
+								strconv.FormatInt(int64(targetEpoch), 10), 
+								val.String(), 
+								data.String(),
+							}
 							ress = append(ress, res)
 						}
 					}else{
