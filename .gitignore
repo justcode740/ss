@@ -1,6 +1,7 @@
 bls-eth-go-binary/data/validator_key_all.csv
 bls-eth-go-binary/data/allValidators.json
 analysis/env
+analysis/data
 bls-eth-go-binary/credentials
 bls-eth-go-binary/token.json
 
