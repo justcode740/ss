@@ -4,4 +4,6 @@ analysis/env
 analysis/data
 bls-eth-go-binary/credentials
 bls-eth-go-binary/token.json
+bls-eth-go-binary/verificationResult
+
 
