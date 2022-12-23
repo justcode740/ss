@@ -631,6 +631,8 @@ func bruteforceSearch() {
 	fmt.Println(c)
 }
 
+
+
 // 4219 608065 included_in: 608067 
 // 56119 608090
 // 0x958391837758f8275e71bf34405d27a509ff1b7de4e7a53d87aa89dbb6800e0f100f57e9fd1a1c1b7f908c3860dfddb4
@@ -823,6 +825,17 @@ func main() {
 
 		},
 	}
+
+	verifyDVCmd := &cobra.Command {
+		Use: "vdv",
+		Short: "verify duplicate votes",
+		Long: "verify duplicate votes",
+		Run: func(cmd *cobra.Command, args []string) {
+			start := time.Now()
+			verifyDv()
+			fmt.Println(time.Since(start))
+		},
+	}
 	
 	
 
@@ -840,6 +853,7 @@ func main() {
 	rootCmd.AddCommand(bfPubkeyCmd)
 	rootCmd.AddCommand(duplicateVoteCmd)
 	rootCmd.AddCommand(correctionCmd)
+	rootCmd.AddCommand(verifyDVCmd)
 
 
 	// Parse the command line flags and arguments

@@ -34,9 +34,16 @@ type Data struct {
 	target_root string
 }
 
+type RecordData struct {
+	data Data
+	validators []int
+	sig string
+}
+
 func (d Data) String() string {
 	return fmt.Sprintf("%d,%d,%s,%d,%s,%d,%s", d.slot, d.cidx, d.bbr, d.source_epoch, d.source_root, d.target_epoch, d.target_root)
 }
+
 
 func searchDuplicateVote(){
 
@@ -130,6 +137,7 @@ func searchDuplicateVote(){
 								strconv.FormatInt(int64(targetEpoch), 10), 
 								val.String(), 
 								data.String(),
+								
 							}
 							rows = append(rows, res)
 						}
