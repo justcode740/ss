@@ -836,6 +836,71 @@ func main() {
 			fmt.Println(time.Since(start))
 		},
 	}
+
+	shuffleCmd := &cobra.Command {
+		Use: "shuffle",
+		Short: "shuffle duplicate votes",
+		Long: "shuffle duplicate votes",
+		Run: func(cmd *cobra.Command, args []string) {
+			start := time.Now()
+			var seed [32]byte
+			copy(seed[:], []byte("326ebe4de88d98ad90bb03fc7fab68d76ffd365feb835c616a18444b43717518"))
+
+			// b := []byte("aef8ab944f63cced7f0f2d2dbe7e8eee3a4f84cbc2e257fb5dcf053e7f61b828dbca786e24b118119dc76d4040ce0ee30f4247305229a427893b810ffccf1d38b37e80e925fb37452184a886f5fed04974e7bdd5065951816a92e0618dcae471")
+
+			// c := []byte(
+			// 	"b0ea7c45822ff047f04630e3611656f146ec7f309f6199a37c609bcb7b836554f1235b3f9c2217220d6012c77a983f7018607b052002d2d1f863b7a3b0829bdff0156eb26973a0a80b9bd0d0e4c41e69d30672ca2611278ca12bfd904bee9d88")
+			// d := []byte(
+			// 	"a808cd9950ad09752e961307ad93ca0cfcef95bd69924f289a2dec204f7ee6a5117d34386e3e8dcfae599fcba8a6b04511e5326350841a0bb5682b5e3991b5c3ec0830327c58c5836b603079e71c31c1a3cbf0a938a64fd1b0358e79bf06236c")
+			// e := []byte(
+			// 	"99f3d02265f4c8b0132f4dc15b1c81d28709257225495027cb396835b1b376565d69bd96b89e44019087d46f30539a9c18d5069fd963af05b2d3c976b31a98592eabbebbbf4c12cd7e6bee60253a7d597b877f8bc04cf73d4792e6f73a066823")
+			// f := []byte(
+			// 	"b32db77c1ead597f86eae75f603c30f0b39bc7d48e35940217149782b43f0d29987d66301a91702cb443c0fe8c35174218946336844eae3f3cb0053ab1b136be1b751c14823860abac03bbb5dc11a7726c90b946d259fc90e82910575330b7d2")
+
+			// for i := 0; i < 32; i++ {
+			// 	seed[i] = seed[i] ^ b[i]
+			// }
+			// for i := 0; i < 32; i++ {
+			// 	seed[i] = seed[i] ^ c[i]
+			// }
+			// for i := 0; i < 32; i++ {
+			// 	seed[i] = seed[i] ^ d[i]
+			// }
+			// for i := 0; i < 32; i++ {
+			// 	seed[i] = seed[i] ^ e[i]
+			// }
+			// for i := 0; i < 32; i++ {
+			// 	seed[i] = seed[i] ^ f[i]
+			// }
+			// fmt.Println(seed)
+			// 0xc98428d231efde4e344843712fe0d328c1b862f0b6b40ab985ef8cc2e825842b
+			lower := ((608090-608064+1)*23 + 11) * 131
+			upper := ((608090-608064+1)*23 + 11) * 132
+			// fmt.Println(lower, upper)
+			// minidx := 0
+			// mini := 0
+			// min := 100000000000000000
+			for i := 96800; i <= 97000; i++{
+				idx := getIndex(56119, uint64(i), seed)
+				// fmt.Println(idx)
+				// if idx >= uint64(lower) {
+				// 	diff := int(idx) - lower
+				// 	if diff < min {
+				// 		min = diff
+				// 		minidx = int(idx)
+				// 		mini = i
+				// 	}
+				// }
+				if  idx >= uint64(lower) && idx <= uint64(upper) {
+					fmt.Println(idx, i)
+
+				}
+			}
+			// fmt.Println(minidx, mini)
+			
+			fmt.Println(time.Since(start))
+		},
+	}
 	
 	
 
@@ -854,7 +919,7 @@ func main() {
 	rootCmd.AddCommand(duplicateVoteCmd)
 	rootCmd.AddCommand(correctionCmd)
 	rootCmd.AddCommand(verifyDVCmd)
-
+	rootCmd.AddCommand(shuffleCmd)
 
 	// Parse the command line flags and arguments
 	rootCmd.Execute()

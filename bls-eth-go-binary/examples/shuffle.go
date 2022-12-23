@@ -5,7 +5,7 @@ import (
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 )
 
-func tt(valIdx uint64, indexCount uint64, seed [32]byte) uint64 {
+func getIndex(valIdx uint64, indexCount uint64, seed [32]byte) uint64 {
 	shuffedIdx, err := helpers.ShuffledIndex(
 		types.ValidatorIndex(valIdx),
 		indexCount,
