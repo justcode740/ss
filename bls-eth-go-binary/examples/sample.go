@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"encoding/csv"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -843,8 +844,9 @@ func main() {
 		Long: "shuffle duplicate votes",
 		Run: func(cmd *cobra.Command, args []string) {
 			start := time.Now()
-			var seed [32]byte
-			copy(seed[:], []byte("326ebe4de88d98ad90bb03fc7fab68d76ffd365feb835c616a18444b43717518"))
+			// var seed [32]byte
+			// bytes, _ := hex.DecodeString( "2c054da59da41371a75148181be79b97671e2ed4355fb0c524aaa238d7e42db5")
+			// copy(seed[:], bytes)
 
 			// b := []byte("aef8ab944f63cced7f0f2d2dbe7e8eee3a4f84cbc2e257fb5dcf053e7f61b828dbca786e24b118119dc76d4040ce0ee30f4247305229a427893b810ffccf1d38b37e80e925fb37452184a886f5fed04974e7bdd5065951816a92e0618dcae471")
 
@@ -874,14 +876,39 @@ func main() {
 			// }
 			// fmt.Println(seed)
 			// 0xc98428d231efde4e344843712fe0d328c1b862f0b6b40ab985ef8cc2e825842b
-			lower := ((608090-608064+1)*23 + 11) * 131
-			upper := ((608090-608064+1)*23 + 11) * 132
+			// lower := ((608090-608064+1)*23 + 11) * 131
+			// upper := ((608090-608064+1)*23 + 11) * 132
 			// fmt.Println(lower, upper)
 			// minidx := 0
 			// mini := 0
 			// min := 100000000000000000
-			for i := 96800; i <= 97000; i++{
-				idx := getIndex(56119, uint64(i), seed)
+
+			f, err := os.Open("randao.csv")
+			if err != nil {
+				
+			}
+			defer f.Close()
+
+			csvReader := csv.NewReader(f)
+			records, err := csvReader.ReadAll()
+		
+			for i := 20000; i <= 22000; i++{
+				for j := 1; j < len(records); j++{
+					row := records[j]
+					if len(row[1]) < 2 {continue}
+					seedstr := row[1][2:]
+					// fmt.Println(seedstr)
+					bytes, _ := hex.DecodeString(seedstr)
+					
+					var seed [32]byte
+					copy(seed[:], bytes)
+					idx := getIndex(131, uint64(i), seed)
+					if idx == 0 {
+						fmt.Println(i, j, idx)
+					}
+				}
+				// idx := reverseIndex(0, uint64(i), seed)
+				// id := getIndex(5596, uint64(i), seed)
 				// fmt.Println(idx)
 				// if idx >= uint64(lower) {
 				// 	diff := int(idx) - lower
@@ -891,13 +918,29 @@ func main() {
 				// 		mini = i
 				// 	}
 				// }
-				if  idx >= uint64(lower) && idx <= uint64(upper) {
-					fmt.Println(idx, i)
+				// if idx == 80113 {
+				// 	fmt.Println(idx, i)
+				// }
+				// fmt.Println(idx, id)
+				// if  idx >= uint64(lower) && idx <= uint64(upper) {
+					
 
-				}
+				// }
 			}
+			// getIndex(100,50,seed)
 			// fmt.Println(minidx, mini)
 			
+			fmt.Println(time.Since(start))
+		},
+	}
+
+	nocorrectionDvCmd:=&cobra.Command {
+		Use: "ndv",
+		Short: "ndv duplicate votes",
+		Long: "ndv duplicate votes",
+		Run: func(cmd *cobra.Command, args []string) {
+			start := time.Now()
+			searchDuplicateVoteWithoutCorrection()
 			fmt.Println(time.Since(start))
 		},
 	}
@@ -920,6 +963,8 @@ func main() {
 	rootCmd.AddCommand(correctionCmd)
 	rootCmd.AddCommand(verifyDVCmd)
 	rootCmd.AddCommand(shuffleCmd)
+	rootCmd.AddCommand(nocorrectionDvCmd)
+
 
 	// Parse the command line flags and arguments
 	rootCmd.Execute()
