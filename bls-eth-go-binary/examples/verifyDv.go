@@ -15,7 +15,7 @@ import (
 
 func verifyDv(){
 	// fetch correction
-	correction := readCorrection()
+	correction := readCorrection("correction/all2.txt")
 	
 	// https://docs.google.com/spreadsheets/d/1mDPwQMA1K7nFbRfkBKXsiv1jgI3KTDVz/edit?usp=share_link&ouid=115469787324806160501&rtpof=true&sd=true
 
@@ -95,7 +95,7 @@ func verifyDv(){
 					sig: sig,
 				}
 				if idx, exist := correction[sig]; exist {
-					validators = []int{idx}
+					validators = idx
 				}
 				for _, valIdx := range validators {
 					if val, exist := idxmap[int(targetEpoch)][valIdx]; exist{
@@ -179,7 +179,7 @@ func verifyDv(){
 				}
 
 				if idx, exist := correction[sig]; exist {
-					validators = []int{idx}
+					validators = idx
 				}
 
 				data := Data {

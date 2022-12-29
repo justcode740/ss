@@ -12,24 +12,31 @@ import (
 )
 
 
-
-func readCorrection() map[string]int{
-	file, err := os.Open("correction/all2.txt")
+// sig -> corrected validator idxs
+func readCorrection(filename string) map[string][]int{
+	// correction/all2.txt
+	file, err := os.Open(filename)
     if err != nil {
        
     }
     defer file.Close()
 
     scanner := bufio.NewScanner(file)
-	mp := map[string]int{}
+	mp := map[string][]int{}
     // optionally, resize scanner's capacity for lines over 64K, see next example
     for scanner.Scan() {
         line := scanner.Text()
 		splitted := strings.Split(line, ",")
 		sig := strings.Trim(splitted[0], " ")
-		valIdx, _ := strconv.Atoi(strings.Trim(splitted[1], " "))
-		mp[sig]=valIdx
-
+		vals := strings.Trim(splitted[1], " ")
+		idxs := strings.Split(vals[1:len(vals)-1], " ")
+		var varidxs []int 
+		for _, idx := range idxs {
+			id, _ := strconv.Atoi(idx)
+			varidxs = append(varidxs, id)
+		}
+		fmt.Println(varidxs)
+		mp[sig]=varidxs
     }
 
     if err := scanner.Err(); err != nil {
@@ -254,4 +261,62 @@ func rec(epoch int){
 	// get committee based on slot and ciidx
 	// use aggregation bit to recover validator idx
 	// 
+}
+
+func verifyCorrected() {
+	readFile, _ := os.Open("allFalse.txt")
+	fileScanner := bufio.NewScanner(readFile)
+ 
+    fileScanner.Split(bufio.ScanLines)
+	
+	f, _ := os.Create(fmt.Sprintf("correction/all%s.txt", time.Now().String()))
+    defer f.Close()
+
+	correction := readCorrection("correction/res.txt")
+  
+	for fileScanner.Scan() {
+		fa := fileScanner.Text()
+		// i := strings.Index(fa, "\"")
+		row := strings.Split(fa, ",")
+
+		// if i > -1 {
+		// 	validatorsstr := fa[i+1:len(fa)-1]
+		// 	validators = strtouints(strings.Trim(validatorsstr, "\\[\\]"))
+		// }else{
+		// 	validators = strtouints(strings.Trim(row[12], "\\[\\]"))
+		// }
+		bbr := row[1]
+		sig := row[6]
+		validators := correction[sig[2:]]
+		var pks []string
+		for _, val := range validators {
+			pks = append(pks, allValidators[val][2:])
+		}
+		slot, _ := strconv.ParseUint(row[7], 10, 64)
+		
+		cidx, _ := strconv.ParseUint(row[5], 10, 64)
+		sourceEpoch, _ := strconv.ParseUint(row[8], 10, 64)
+		sourceRoot := row[9]
+		targetEpoch, _ := strconv.ParseUint(row[10], 10, 64)
+		targetRoot := row[11]
+		
+		// get data root
+		signing_root := getSigningRoot2(bbr[2:], sig[2:], uint(slot), uint(cidx), uint(sourceEpoch), uint(targetEpoch), sourceRoot[2:], targetRoot[2:])
+		// fmt.Println(signing_root)
+		// get sig to verify
+		sig = sig[2:]
+		r := aggregateVerify(signing_root[:], pks, sig)
+		if r {
+			f.WriteString("true\n")
+		}else{
+			f.WriteString("false\n")
+		}
+			
+		
+		
+
+
+	}
+	readFile.Close()
+	
 }
