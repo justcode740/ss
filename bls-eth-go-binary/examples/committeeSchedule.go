@@ -73,6 +73,12 @@ func getValidatorIdx(slot int, committeeIdx int) {
 	
 	
 }
+// seed start from 0x
+func getFirstIndex(randaoMix string, epoch int, indexCount int){
+	bytes, _ := hex.DecodeString(randaoMix[2:])
+	seed, _ := seed(bytes, types.Epoch(epoch), params.BeaconConfig().DomainBeaconAttester)
+	fmt.Println(getIndex(0, uint64(indexCount), seed))
+}
 
 
 	// for i:=20000; i<50000; i++{
