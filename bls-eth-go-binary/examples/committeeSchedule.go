@@ -2,31 +2,59 @@ package main
 
 import (
 	// "context"
+	// "context"
+	"context"
 	"encoding/csv"
 	"encoding/hex"
 	"fmt"
 	"os"
+	"sort"
 	"strconv"
 
+	// "github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	// "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
+
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
 
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 )
-func getValidatorIdx(slot int, committeeIdx int) {
+
+// randaomix NO 0x prefix
+func getCommitteeSchedule(slot int, committeeIdx int, randaoMix string, validatorIdxFileName string, computeScheduleEpoch int) []int {
 	// att.slot + att.communityIdx -> uniquely identify a community
 	// 
 	// var validators []types.ValidatorIndex
-	// for i := 0; i <= 21062; i++ {
+	// except := []int{4086,  4100, 4102, 4110,  4259,  4390,  4451, 13869, 18249, 20075, 21574}
+	// for i := 0; i <= 23090; i++ {
+	// 	if contains(except, i) {continue}
 	// 	validators = append(validators, types.ValidatorIndex(i))
 	// }	
-	// validators := totalValidatorIndex()
+	validators := totalValidatorIndex(validatorIdxFileName)
 	// fmt.Println(len(validators))
 	// fmt.Println(len(validators))
 	// bytes, _ := hex.DecodeString("11d84448ae8fd84292d51a0eb718e6318bce5055ac2bcabd8016f61719f9fbe2")
+	bytes, _ := hex.DecodeString(randaoMix)
+
+	seed, _ := seed(bytes, types.Epoch(computeScheduleEpoch), params.BeaconConfig().DomainBeaconAttester)
+	committee, err := helpers.BeaconCommittee(
+		context.TODO(),
+		validators,
+		seed,
+		types.Slot(slot),
+		types.CommitteeIndex(committeeIdx),
+	)
+	if err != nil {
+		fmt.Println(err)
+	}
+	// fmt.Println(committee)
+	res := []int{}
+	for _, idx := range committee {
+		res = append(res, int(idx))
+	}
+	return res
 	// f, err := os.Open("examples/randaos_slots.csv")
 	
     // if err != nil {
@@ -39,33 +67,36 @@ func getValidatorIdx(slot int, committeeIdx int) {
 	// if err != nil{
 	// 	fmt.Println("ERR")
 	// }
-	// // each row is an att
+	// each row is an att
 	// for i := 1; i < len(records); i++{
 	// 	// fmt.Println(records[i])
 	// 	str := records[i][1][2:]
 	// 	bytes, _ := hex.DecodeString(str)
 		
-	// 	seed, _ := seed(bytes, types.Epoch(i+4), params.BeaconConfig().DomainBeaconAttester)
-	// 	fmt.Println( getIndex(0, 21063, seed))
+	// 	seed, _ := seed(bytes, types.Epoch(551), params.BeaconConfig().DomainBeaconAttester)
+
+		
+		// fmt.Println( getIndex(0, 21063, seed))
 		
 
-	// 	// for i := 20000; i < 50000; i++{
-	// 	// 	// 33667
-	// 	// if getIndex(0, uint64(i), seed)==16876 && getIndex(1, uint64(i), seed)==20508 {
-	// 	// 	fmt.Println(i, seed)
-	// 	// }
+		// for i := 20000; i < 50000; i++{
+		// 	// 33667
+		// if getIndex(0, uint64(i), seed)==16876 && getIndex(1, uint64(i), seed)==20508 {
+		// 	fmt.Println(i, seed)
+		// }
 	// }
 	
 	// bytes, _ := hex.DecodeString("bf606fd377e1dae753845576d5452d6a591a7bf3bbb6409dc6d61e382e3ad749")
 	// bytes, _ := hex.DecodeString("d8ab7b20cd0dbf12ce09670551e14e30860b658835885e8c794fa6f05da25b25")
 	// bytes, _ := hex.DecodeString("9f9b1ed30050bcca663b41062db496c5d797b922ea459eb566bc0d46c1d66b24")
 	// bytes, _ := hex.DecodeString("ae37c35f939f3ea47cebeb2e6689b31247215477ffeffb18fd4b7dbbce7aaf48")
-	bytes, _ := hex.DecodeString("d8ab7b20cd0dbf12ce09670551e14e30860b658835885e8c794fa6f05da25b25")
+	// bytes, _ := hex.DecodeString("d8ab7b20cd0dbf12ce09670551e14e30860b658835885e8c794fa6f05da25b25")
 
 
 	
-	seed, _ := seed(bytes, types.Epoch(3199), params.BeaconConfig().DomainBeaconAttester)
-	fmt.Println(getIndex(0, 33667, seed))
+	// seed, _ := seed(bytes, types.Epoch(3199), params.BeaconConfig().DomainBeaconAttester)
+	// fmt.Println(getIndex(0, 33667, seed))
+	// fmt.Println(params.BeaconConfig().ShuffleRoundCount)
 	// for i:=0; i<10; i++{
 	// 	fmt.Println(getIndex(uint64(i), 21063, seed))
 
@@ -111,9 +142,9 @@ func getFirstIndex(randaoMix string, epoch int, indexCount int){
 
 
 
-func totalValidatorIndex() []types.ValidatorIndex {
+func totalValidatorIndex(filename string) []types.ValidatorIndex {
 	// reader, _ := readFile(srv, f.Id)
-	f, err := os.Open("examples/validator102368tmp.csv")
+	f, err := os.Open(filename)
     if err != nil {
         
     }
@@ -124,15 +155,20 @@ func totalValidatorIndex() []types.ValidatorIndex {
 	if err != nil{
 		fmt.Println("ERR")
 	}
-	var validators []types.ValidatorIndex
+	var validators []int
 	// each row is an att
 	for i := 0; i < len(records); i++{
 		// fmt.Println(records[i][0])
 		idx, _ := strconv.Atoi(records[i][0])
-		validators = append(validators, types.ValidatorIndex(idx))
+		validators = append(validators, idx)
+		// validators = append(validators, types.ValidatorIndex(idx))
 	}
-
-	return validators
+	sort.Ints(validators)
+	var res []types.ValidatorIndex
+	for i:=0; i< len(validators); i++{
+		res = append(res, types.ValidatorIndex(validators[i]))
+	}
+	return res
 }
 
 func seed(randaoMix []byte, epoch types.Epoch, domain [bls.DomainByteLength]byte) ([32]byte, error) {

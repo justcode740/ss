@@ -23,8 +23,7 @@ import (
 )
 
 var allValidators map[int]string
-var mp  map[string]bool
-
+var mp map[string]bool
 
 func sample1() {
 	fmt.Printf("sample1\n")
@@ -88,7 +87,7 @@ func sample4() {
 func aggregateVerify(msg []byte, rawPks []string, sigToVerify string) bool {
 	sig := bls.Sign{}
 	sig.DeserializeHexStr(sigToVerify)
-	
+
 	var pks []bls.PublicKey
 	for _, rawPk := range rawPks {
 		pk := bls.PublicKey{}
@@ -99,12 +98,11 @@ func aggregateVerify(msg []byte, rawPks []string, sigToVerify string) bool {
 	return sig.FastAggregateVerify(pks, msg)
 }
 
-
 func verfiyAttestationByValidatorAndBlock(validator int, blockSlot int) ([]bool, []string) {
 	block := readBlockInfo(blockInfoDataFolder, uint(blockSlot))
 	res := []bool{}
 	sigs := []string{}
-	for _, attestation := range (block.Data) {
+	for _, attestation := range block.Data {
 		if contains(attestation.Validators, validator) {
 			// get data root
 			signing_root := getSigningRoot2(attestation.Beaconblockroot[2:], attestation.Signature[2:], uint(attestation.Slot), uint(attestation.Committeeindex), uint(attestation.SourceEpoch), uint(attestation.TargetEpoch), attestation.SourceRoot[2:], attestation.TargetRoot[2:])
@@ -119,13 +117,13 @@ func verfiyAttestationByValidatorAndBlock(validator int, blockSlot int) ([]bool,
 			sigs = append(sigs, attestation.Signature)
 		}
 	}
-	
+
 	return res, sigs
 }
 
 func verifyAttestation(beaconBlockRoot string, sig string, slot uint, committeeIdx uint, sourceEpoch uint, targetEpoch uint, sourceRoot string, targetRoot string, validators []int) bool {
 	// get data root
-	signing_root := getSigningRoot2(beaconBlockRoot[2:], sig[2:], slot, committeeIdx, sourceEpoch, targetEpoch, sourceRoot[2:],  targetRoot[2:])
+	signing_root := getSigningRoot2(beaconBlockRoot[2:], sig[2:], slot, committeeIdx, sourceEpoch, targetEpoch, sourceRoot[2:], targetRoot[2:])
 	var pks []string
 	for _, idx := range validators {
 		pks = append(pks, allValidators[idx][2:])
@@ -141,7 +139,7 @@ func verifyAllAttestationInBlock(blockSlot int) []bool {
 	}
 	block := readBlockInfo(folderPath, uint(blockSlot))
 	res := []bool{}
-	for _, attestation := range (block.Data) {
+	for _, attestation := range block.Data {
 		// key := strconv.Itoa(attestation.Slot) + ":" + strconv.Itoa(attestation.Committeeindex)
 
 		// get data root
@@ -155,7 +153,7 @@ func verifyAllAttestationInBlock(blockSlot int) []bool {
 		r := aggregateVerify(signing_root[:], pks, sig)
 		res = append(res, r)
 	}
-	
+
 	return res
 }
 
@@ -163,7 +161,7 @@ func searchSinglePubKey(validator int, blockSlot int) (int, string) {
 	block := readBlockInfo(blockInfoDataFolder, uint(blockSlot))
 	var idxRes int
 	var pkRes string
-	for _, attestation := range (block.Data) {
+	for _, attestation := range block.Data {
 		if contains(attestation.Validators, validator) {
 			// get data root
 			signing_root := getSigningRoot2(attestation.Beaconblockroot[2:], attestation.Signature[2:], uint(attestation.Slot), uint(attestation.Committeeindex), uint(attestation.SourceEpoch), uint(attestation.TargetEpoch), attestation.SourceRoot[2:], attestation.TargetRoot[2:])
@@ -171,10 +169,12 @@ func searchSinglePubKey(validator int, blockSlot int) (int, string) {
 			sig := attestation.Signature[2:]
 			var wg sync.WaitGroup
 			wg.Add(1)
-			found:=false
-			for idx, pubkey := range allValidators{
+			found := false
+			for idx, pubkey := range allValidators {
 				go func(idx int, pubkey string) {
-					if found {return}
+					if found {
+						return
+					}
 					var pks []string
 					pks = append(pks, pubkey[2:])
 					r := aggregateVerify(signing_root[:], pks, sig)
@@ -186,21 +186,19 @@ func searchSinglePubKey(validator int, blockSlot int) (int, string) {
 						found = true
 					}
 				}(idx, pubkey)
-				
 
 			}
 			wg.Wait()
-			break	
+			break
 		}
 	}
 	return idxRes, pkRes
 
-	
 }
 
 func checkExcel() {
 	f, err := excelize.OpenFile("./data/unslashed_double_votes.xlsx")
-	if err!=nil {
+	if err != nil {
 		fmt.Println(err)
 	}
 	eth2Client := newEth2Client()
@@ -219,19 +217,21 @@ func checkExcel() {
 			_, pks, sig, err := eth2Client.GetAttestationsForBlock(uint(blockSlot), validator)
 			if err != nil {
 				fmt.Print(err)
-			}else{
+			} else {
 				fmt.Print(strconv.FormatBool(aggregateVerify(nil, pks, sig)) + "    ")
 			}
 			time.Sleep(1 * time.Second)
-			
+
 		}
 		fmt.Println()
 	}
 }
+
 var c map[string]bool
-func checkDoubleVoteWithLocalData(){
+
+func checkDoubleVoteWithLocalData() {
 	f, err := excelize.OpenFile("./data/unslashed_double_votes.xlsx")
-	if err!=nil {
+	if err != nil {
 		fmt.Println(err)
 	}
 	fmt.Println("dd")
@@ -250,41 +250,41 @@ func checkDoubleVoteWithLocalData(){
 		}
 		blocks = removeDuplicateInt(blocks)
 		// c, t, f:=0,0,0
-		
+
 		for _, blockSlot := range blocks {
 			res, sigs := verfiyAttestationByValidatorAndBlock(validator, blockSlot)
-			for i:=0; i <len(res) ; i++{
+			for i := 0; i < len(res); i++ {
 				if !res[i] {
 					c[sigs[i]] = true
 				}
-				fmt.Print(strconv.FormatBool(res[i])+"  ")
+				fmt.Print(strconv.FormatBool(res[i]) + "  ")
 			}
-			
+
 		}
 		fmt.Println()
 	}
 	fmt.Println(len(c))
 	// file, _ := json.MarshalIndent(mp, "", " ")
 	// _ = ioutil.WriteFile("slot:committeeIdx.json", file, 0644)
-	
+
 }
 
 // func key(committeeIdx int, slot int) string {
 // 	strconv.FormatInt(slot, 10) + ":" + strconv
 // }
 
-func checkSurroundVoteWithLocalData(){
+func checkSurroundVoteWithLocalData() {
 	f, err := os.Open("./data/surround_vote")
-	if err!=nil {
+	if err != nil {
 		fmt.Println(err)
 	}
 
 	defer f.Close()
 
-    scanner := bufio.NewScanner(f)
-    // optionally, resize scanner's capacity for lines over 64K, see next example
+	scanner := bufio.NewScanner(f)
+	// optionally, resize scanner's capacity for lines over 64K, see next example
 	first := true
-    for scanner.Scan() {
+	for scanner.Scan() {
 		if first {
 			first = false
 			continue
@@ -293,24 +293,24 @@ func checkSurroundVoteWithLocalData(){
 		idx, _ := strconv.Atoi(vals[0])
 		blockslot, _ := strconv.Atoi(vals[1])
 		res, sigs := verfiyAttestationByValidatorAndBlock(idx, blockslot)
-        for i:=0; i <len(res) ; i++{
+		for i := 0; i < len(res); i++ {
 			if !res[i] {
 				c[sigs[i]] = true
 			}
-			fmt.Print(strconv.FormatBool(res[i])+"  ")
+			fmt.Print(strconv.FormatBool(res[i]) + "  ")
 		}
 		fmt.Println()
-    }
+	}
 
-    if err := scanner.Err(); err != nil {
-        panic(err)
-    }
+	if err := scanner.Err(); err != nil {
+		panic(err)
+	}
 	fmt.Println(len(c))
 }
 
-func checkalgo(){
+func checkalgo() {
 	f, err := excelize.OpenFile("./data/unslashed_double_votes.xlsx")
-	if err!=nil {
+	if err != nil {
 		fmt.Println(err)
 	}
 	all_validators := getValidatorMap()
@@ -331,11 +331,11 @@ func checkalgo(){
 			fmt.Println(err)
 		}
 		blocks = removeDuplicateInt(blocks)
-		c, t, f:=0,0,0
-		
+		c, t, f := 0, 0, 0
+
 		for _, blockSlot := range blocks {
 			res := readBlockInfo(blockInfoDataFolder, uint(blockSlot))
-			for _, attestation := range (res.Data) {
+			for _, attestation := range res.Data {
 				if !contains(attestation.Validators, validator) {
 					// get data root
 					// msg := attestation.Beaconblockroot
@@ -346,25 +346,25 @@ func checkalgo(){
 					}
 					// get sig to verify
 					sig := attestation.Signature
-					check:=aggregateVerify(nil, pks, sig)
+					check := aggregateVerify(nil, pks, sig)
 					// fmt.Print(strconv.FormatBool(check)+"  ")
-					if check{
+					if check {
 						t++
-					}else{
+					} else {
 						f++
 					}
 					c++
-					
+
 				}
 			}
 		}
-		if c==2 {
+		if c == 2 {
 			count++
-			if t==0 {
+			if t == 0 {
 				both_false++
-			}else if t==2{
+			} else if t == 2 {
 				both_true++
-			}else{
+			} else {
 				true_false++
 			}
 		}
@@ -374,15 +374,15 @@ func checkalgo(){
 }
 
 func removeDuplicateInt(intSlice []int) []int {
-    allKeys := make(map[int]bool)
-    list := []int{}
-    for _, item := range intSlice {
-        if _, value := allKeys[item]; !value {
-            allKeys[item] = true
-            list = append(list, item)
-        }
-    }
-    return list
+	allKeys := make(map[int]bool)
+	list := []int{}
+	for _, item := range intSlice {
+		if _, value := allKeys[item]; !value {
+			allKeys[item] = true
+			list = append(list, item)
+		}
+	}
+	return list
 }
 
 func verifyAllFromDrive() {
@@ -393,30 +393,30 @@ func verifyAllFromDrive() {
 
 func allFalseAttestations() {
 	items, _ := ioutil.ReadDir("verificationResult")
-	c:=0
+	c := 0
 	f, _ := os.Create("allFalse.txt")
-    defer f.Close()
+	defer f.Close()
 
 	for _, item := range items {
 		fileLoc := "verificationResult/" + item.Name()
 		readFile, err := os.Open(fileLoc)
-  
-    	if err != nil {
-        	fmt.Println(err)
-   	 	}
-    	fileScanner := bufio.NewScanner(readFile)
- 
-    	fileScanner.Split(bufio.ScanLines)
-  
-    	for fileScanner.Scan() {
+
+		if err != nil {
+			fmt.Println(err)
+		}
+		fileScanner := bufio.NewScanner(readFile)
+
+		fileScanner.Split(bufio.ScanLines)
+
+		for fileScanner.Scan() {
 			c++
-    	    // fmt.Println(fileScanner.Text())
+			// fmt.Println(fileScanner.Text())
 			f.WriteString(fileScanner.Text())
 			f.WriteString("\n")
-    	}
-  
-    	readFile.Close()
-		
+		}
+
+		readFile.Close()
+
 	}
 	fmt.Println(c)
 }
@@ -425,7 +425,7 @@ func fetchepochs(interestedBlock int) {
 	start := time.Now()
 	blocks := []uint{}
 	startBlock := (interestedBlock / 32) * 32
-	for block := startBlock; block < startBlock + 32; block++{
+	for block := startBlock; block < startBlock+32; block++ {
 		blocks = append(blocks, uint(block))
 	}
 	batchWriteBlockInfo("epochs/", blocks)
@@ -446,12 +446,12 @@ func unvotedValidators(interestedBlock int) []int {
 	// epoch's blocks under epochs/, committee schedule under schedule/
 	file, _ := ioutil.ReadFile(fmt.Sprintf("schedule/%d.json", interestedBlock))
 	var schedule Schedule
-	_  = json.Unmarshal([]byte(file), &schedule)
+	_ = json.Unmarshal([]byte(file), &schedule)
 	allValidators := map[int]bool{}
 	for _, val := range schedule.Data {
-		for _, validator := range val.Validators{
+		for _, validator := range val.Validators {
 			idx, _ := strconv.Atoi(validator)
-			if _, exist := allValidators[idx]; !exist{
+			if _, exist := allValidators[idx]; !exist {
 				allValidators[idx] = true
 			}
 		}
@@ -460,7 +460,7 @@ func unvotedValidators(interestedBlock int) []int {
 	// unique validators in that epoch
 	votedValidators := map[int]bool{}
 	startBlock := (interestedBlock / 32) * 32
-	for block := startBlock; block < startBlock + 32; block++{
+	for block := startBlock; block < startBlock+32; block++ {
 		atts := readBlockInfo("epochs/", uint(block))
 		for _, val := range atts.Data {
 			for _, idx := range val.Validators {
@@ -468,8 +468,8 @@ func unvotedValidators(interestedBlock int) []int {
 					fmt.Println(val)
 					os.Exit(0)
 				}
-				if _, exist := votedValidators[idx]; !exist{
-					votedValidators[idx]=true
+				if _, exist := votedValidators[idx]; !exist {
+					votedValidators[idx] = true
 				}
 			}
 		}
@@ -488,7 +488,6 @@ func unvotedValidators(interestedBlock int) []int {
 	return unvotedValidators
 
 	// search all voted validators in that epoch by traverse files epoch/
-	
 
 }
 
@@ -498,28 +497,30 @@ func smartSearchPubkeys(interestedBlock int) {
 	// traverse all false att, correct each by brute force search space
 	readFile, _ := os.Open("allFalse.txt")
 	fileScanner := bufio.NewScanner(readFile)
- 
-    fileScanner.Split(bufio.ScanLines)
+
+	fileScanner.Split(bufio.ScanLines)
 
 	f, _ := os.Create(fmt.Sprintf("correction/%d.txt", interestedBlock))
-    defer f.Close()
-  
+	defer f.Close()
+
 	for fileScanner.Scan() {
 		fa := fileScanner.Text()
 		row := strings.Split(fa, ",")
-		blockslot, _:=strconv.ParseUint(row[4], 10, 64)
-		if blockslot != uint64(interestedBlock)  {continue}
+		blockslot, _ := strconv.ParseUint(row[4], 10, 64)
+		if blockslot != uint64(interestedBlock) {
+			continue
+		}
 
 		bbr := row[1]
 		sig := row[6]
 		slot, _ := strconv.ParseUint(row[7], 10, 64)
-		
+
 		cidx, _ := strconv.ParseUint(row[5], 10, 64)
 		sourceEpoch, _ := strconv.ParseUint(row[8], 10, 64)
 		sourceRoot := row[9]
 		targetEpoch, _ := strconv.ParseUint(row[10], 10, 64)
 		targetRoot := row[11]
-		if row[12][0]=='"' {
+		if row[12][0] == '"' {
 			row[12] = strings.Trim(row[12], "\"\"")
 		}
 		validators := strtouints(strings.Trim(row[12], "\\[\\]"))
@@ -531,110 +532,28 @@ func smartSearchPubkeys(interestedBlock int) {
 		// get sig to verify
 		sig = sig[2:]
 
-
 		if len(validators) == 1 {
 			// searchSinglePubKey(validators[0], interestedBlock)
-			for _, valIdx := range searchSpace{
-					pubkey := allValidators[valIdx]
-					var pks []string
-					pks = append(pks, pubkey[2:])
-					r := aggregateVerify(signing_root[:], pks, sig)
-					if r {
-						fmt.Println(pubkey)
-						f.WriteString(fmt.Sprintf("%s, %d, %s", sig, valIdx, pubkey))
-						
-						
-						
-					}
-			
+			for _, valIdx := range searchSpace {
+				pubkey := allValidators[valIdx]
+				var pks []string
+				pks = append(pks, pubkey[2:])
+				r := aggregateVerify(signing_root[:], pks, sig)
+				if r {
+					fmt.Println(pubkey)
+					f.WriteString(fmt.Sprintf("%s, %d, %s", sig, valIdx, pubkey))
+
+				}
+
 			}
 		}
 	}
-  
-    readFile.Close()
 
-	
-	
-}
-
-func bruteforceSearch() {
-	readFile, _ := os.Open("allFalse.txt")
-	fileScanner := bufio.NewScanner(readFile)
- 
-    fileScanner.Split(bufio.ScanLines)
-	
-	f, _ := os.Create(fmt.Sprintf("correction/all%s.txt", time.Now().String()))
-    defer f.Close()
-
-	c := 0
-  
-	for fileScanner.Scan() {
-		fa := fileScanner.Text()
-		i := strings.Index(fa, "\"")
-		row := strings.Split(fa, ",")
-
-		var validators []int
-		if i > -1 {
-			validatorsstr := fa[i+1:len(fa)-1]
-			validators = strtouints(strings.Trim(validatorsstr, "\\[\\]"))
-		}else{
-			validators = strtouints(strings.Trim(row[12], "\\[\\]"))
-		}
-		bbr := row[1]
-		sig := row[6]
-		slot, _ := strconv.ParseUint(row[7], 10, 64)
-		
-		cidx, _ := strconv.ParseUint(row[5], 10, 64)
-		sourceEpoch, _ := strconv.ParseUint(row[8], 10, 64)
-		sourceRoot := row[9]
-		targetEpoch, _ := strconv.ParseUint(row[10], 10, 64)
-		targetRoot := row[11]
-		
-		// get data root
-		signing_root := getSigningRoot2(bbr[2:], sig[2:], uint(slot), uint(cidx), uint(sourceEpoch), uint(targetEpoch), sourceRoot[2:], targetRoot[2:])
-		// fmt.Println(signing_root)
-		// get sig to verify
-		sig = sig[2:]
-		// only search for 1-val case
-		if len(validators)==1{
-			c++
-			fmt.Println(fmt.Sprintf("search for validator %d", validators[0]))
-			found := false
-			var wg sync.WaitGroup
-			wg.Add(1)
-			for idx, pubkey := range allValidators{
-				go func(valIdx int, pubkey string) {
-					if found { return }
-					var pks []string
-					pks = append(pks, pubkey[2:])
-					r := aggregateVerify(signing_root[:], pks, sig)
-					if r {
-						f.WriteString(fmt.Sprintf("%s, %d, %s\n", sig, valIdx, pubkey))
-						fmt.Println(sig, valIdx, pubkey)
-						found = true
-						wg.Done()
-					}
-				}(idx, pubkey)
-				
-
-			}
-			wg.Wait()
-			if !found {
-				fmt.Println(validators)
-			}
-		
-		}
-		
-
-
-	}
 	readFile.Close()
-	fmt.Println(c)
+
 }
 
-
-
-// 4219 608065 included_in: 608067 
+// 4219 608065 included_in: 608067
 // 56119 608090
 // 0x958391837758f8275e71bf34405d27a509ff1b7de4e7a53d87aa89dbb6800e0f100f57e9fd1a1c1b7f908c3860dfddb4
 //25359  988961 included in: 988965
@@ -653,7 +572,7 @@ func bruteforceSearch() {
 func main() {
 	bls.Init(bls.BLS12_381)
 	bls.SetETHmode(bls.EthModeDraft07)
-	
+
 	allValidators = getValidatorMap3()
 	c = map[string]bool{}
 	// mp = make(map[string]bool)
@@ -678,12 +597,11 @@ func main() {
 		},
 	}
 
-
 	var blockId uint64
-	verifyAllAttestationInBlockCmd := &cobra.Command {
-		Use: "verifyAll --blockId=<blockslot>",
+	verifyAllAttestationInBlockCmd := &cobra.Command{
+		Use:   "verifyAll --blockId=<blockslot>",
 		Short: "verify all attestations in a specified block",
-		Long: "verifyAllAttestationInBlock [blockid] if the block doesn't exist locally, fetch the block from beaconcha.in under test/ and verify",
+		Long:  "verifyAllAttestationInBlock [blockid] if the block doesn't exist locally, fetch the block from beaconcha.in under test/ and verify",
 		Run: func(cmd *cobra.Command, args []string) {
 			fmt.Println(verifyAllAttestationInBlock(int(blockId)))
 		},
@@ -693,10 +611,10 @@ func main() {
 
 	// Note currently only suport file in blockinfo folder, change to fetch later
 	var validatorIdx uint64
-	verifyAttestationByValidatorAndBlockCmd := &cobra.Command {
-		Use: "verify --valIdx=<validatorIdx> --blockId=<blockslot>",
+	verifyAttestationByValidatorAndBlockCmd := &cobra.Command{
+		Use:   "verify --valIdx=<validatorIdx> --blockId=<blockslot>",
 		Short: "verify attestations that contains validatorIdx in a specified block",
-		Long: "verfiyAttestationByValidatorAndBlock [blockid] verify att that involves [valIdx]",
+		Long:  "verfiyAttestationByValidatorAndBlock [blockid] verify att that involves [valIdx]",
 		Run: func(cmd *cobra.Command, args []string) {
 			fmt.Println(verfiyAttestationByValidatorAndBlock(int(validatorIdx), int(blockId)))
 		},
@@ -707,10 +625,10 @@ func main() {
 	verifyAttestationByValidatorAndBlockCmd.MarkFlagRequired("valIdx")
 
 	var typ string
-	checkCmd := &cobra.Command {
-		Use: "check --type=double|surround",
+	checkCmd := &cobra.Command{
+		Use:   "check --type=double|surround",
 		Short: "check for all interested attestations in double / surround vote detected from beaconcha.in",
-		Long: "check for interested blocks in potential double vote / surround vote detected from beaconcha.in",
+		Long:  "check for interested blocks in potential double vote / surround vote detected from beaconcha.in",
 		Run: func(cmd *cobra.Command, args []string) {
 			switch typ {
 			case "double":
@@ -726,10 +644,10 @@ func main() {
 	checkCmd.Flags().StringVar(&typ, "type", "", "Required argument")
 	checkCmd.MarkFlagRequired("typ")
 
-	searchCmd := &cobra.Command {
-		Use: "search --valIdx=<validatorIdx> --blockId=<blockId>",
+	searchCmd := &cobra.Command{
+		Use:   "search --valIdx=<validatorIdx> --blockId=<blockId>",
 		Short: "brute-force search for correct signer for sinlge validator case",
-		Long: "brute-force search for correct signer for sinlge validator case",
+		Long:  "brute-force search for correct signer for sinlge validator case",
 		Run: func(cmd *cobra.Command, args []string) {
 			idx, pubkey := searchSinglePubKey(int(validatorIdx), int(blockId))
 			fmt.Println(idx, pubkey)
@@ -740,61 +658,61 @@ func main() {
 	searchCmd.MarkFlagRequired("blockId")
 	searchCmd.MarkFlagRequired("valIdx")
 
-	verifyAllCmd := &cobra.Command {
-		Use: "verifyDrive",
+	verifyAllCmd := &cobra.Command{
+		Use:   "verifyDrive",
 		Short: "fetch from google drive and verify all atts for all blocks, output failed verification to verificationResult/",
-		Long: "fetch from google drive and verify all atts",
+		Long:  "fetch from google drive and verify all atts",
 		Run: func(cmd *cobra.Command, args []string) {
 			verifyAllFromDrive()
 		},
 	}
 
-	allFalseAttestationCmd := &cobra.Command {
-		Use: "allFalse",
+	allFalseAttestationCmd := &cobra.Command{
+		Use:   "allFalse",
 		Short: "fetch from google drive and verify all atts for all blocks, output failed verification to verificationResult/",
-		Long: "fetch from google drive and verify all atts",
+		Long:  "fetch from google drive and verify all atts",
 		Run: func(cmd *cobra.Command, args []string) {
 			allFalseAttestations()
 		},
 	}
 
-	fetchEpochByInterestedBlockCmd := &cobra.Command {
-		Use: "fetch epoch for interested block",
+	fetchEpochByInterestedBlockCmd := &cobra.Command{
+		Use:   "fetch epoch for interested block",
 		Short: "fetch epoch for interested block under epochs/",
-		Long: "fetch epoch for interested block under epochs/",
+		Long:  "fetch epoch for interested block under epochs/",
 		Run: func(cmd *cobra.Command, args []string) {
 			fetchepochs(608067)
 		},
 	}
 
-	unvotedValidatorsCmd := &cobra.Command {
-		Use: "unvote validators in epoch defined by interested block",
+	unvotedValidatorsCmd := &cobra.Command{
+		Use:   "unvote validators in epoch defined by interested block",
 		Short: "unvote validators in epoch defined by interested block",
-		Long: "unvote validators in epoch defined by interested block",
+		Long:  "unvote validators in epoch defined by interested block",
 		Run: func(cmd *cobra.Command, args []string) {
 			unvotedValidators(608067)
 		},
 	}
-	smartSearchCmd := &cobra.Command {
-		Use: "ss smart search pubkey for correct signing validator sets",
+	smartSearchCmd := &cobra.Command{
+		Use:   "ss smart search pubkey for correct signing validator sets",
 		Short: "ss smart search pubkey for correct signing validator sets",
-		Long: "ss smart search pubkey for correct signing validator sets",
+		Long:  "ss smart search pubkey for correct signing validator sets",
 		Run: func(cmd *cobra.Command, args []string) {
 			smartSearchPubkeys(608067)
 		},
 	}
-	signingRootCmd := &cobra.Command {
-		Use: "sr validators in epoch defined by interested block",
+	signingRootCmd := &cobra.Command{
+		Use:   "sr validators in epoch defined by interested block",
 		Short: "sr validators in epoch defined by interested block",
-		Long: "sr validators in epoch defined by interested block",
+		Long:  "sr validators in epoch defined by interested block",
 		Run: func(cmd *cobra.Command, args []string) {
 			getSigningRoot()
 		},
 	}
-	bfPubkeyCmd := &cobra.Command {
-		Use: "bf brufeforce search pubkey for each 1-val case",
+	bfPubkeyCmd := &cobra.Command{
+		Use:   "bf brufeforce search pubkey for each 1-val case",
 		Short: "bf brufeforce search pubkey for each 1-val case",
-		Long: "bf brufeforce search pubkey for each 1-val case",
+		Long:  "bf brufeforce search pubkey for each 1-val case",
 		Run: func(cmd *cobra.Command, args []string) {
 			start := time.Now()
 			bruteforceSearch()
@@ -803,10 +721,10 @@ func main() {
 		},
 	}
 
-	duplicateVoteCmd := &cobra.Command {
-		Use: "dv duplicated vote for same target epoch with diff data",
+	duplicateVoteCmd := &cobra.Command{
+		Use:   "dv duplicated vote for same target epoch with diff data",
 		Short: "dv duplicated vote for same target epoch with diff data",
-		Long: "dv duplicated vote for same target epoch with diff data",
+		Long:  "dv duplicated vote for same target epoch with diff data",
 		Run: func(cmd *cobra.Command, args []string) {
 			start := time.Now()
 			searchDuplicateVote()
@@ -815,10 +733,10 @@ func main() {
 		},
 	}
 
-	correctionCmd := &cobra.Command {
-		Use: "show correction map",
+	correctionCmd := &cobra.Command{
+		Use:   "show correction map",
 		Short: "show correction map",
-		Long: "show correction map",
+		Long:  "show correction map",
 		Run: func(cmd *cobra.Command, args []string) {
 			start := time.Now()
 			fmt.Println(readCorrection())
@@ -827,10 +745,10 @@ func main() {
 		},
 	}
 
-	verifyDVCmd := &cobra.Command {
-		Use: "vdv",
+	verifyDVCmd := &cobra.Command{
+		Use:   "vdv",
 		Short: "verify duplicate votes",
-		Long: "verify duplicate votes",
+		Long:  "verify duplicate votes",
 		Run: func(cmd *cobra.Command, args []string) {
 			start := time.Now()
 			verifyDv()
@@ -838,10 +756,10 @@ func main() {
 		},
 	}
 
-	shuffleCmd := &cobra.Command {
-		Use: "shuffle",
+	shuffleCmd := &cobra.Command{
+		Use:   "shuffle",
 		Short: "shuffle duplicate votes",
-		Long: "shuffle duplicate votes",
+		Long:  "shuffle duplicate votes",
 		Run: func(cmd *cobra.Command, args []string) {
 			start := time.Now()
 			// var seed [32]byte
@@ -885,21 +803,23 @@ func main() {
 
 			f, err := os.Open("randao.csv")
 			if err != nil {
-				
+
 			}
 			defer f.Close()
 
 			csvReader := csv.NewReader(f)
 			records, err := csvReader.ReadAll()
-		
-			for i := 20000; i <= 22000; i++{
-				for j := 1; j < len(records); j++{
+
+			for i := 20000; i <= 22000; i++ {
+				for j := 1; j < len(records); j++ {
 					row := records[j]
-					if len(row[1]) < 2 {continue}
+					if len(row[1]) < 2 {
+						continue
+					}
 					seedstr := row[1][2:]
 					// fmt.Println(seedstr)
 					bytes, _ := hex.DecodeString(seedstr)
-					
+
 					var seed [32]byte
 					copy(seed[:], bytes)
 					idx := getIndex(131, uint64(i), seed)
@@ -923,21 +843,20 @@ func main() {
 				// }
 				// fmt.Println(idx, id)
 				// if  idx >= uint64(lower) && idx <= uint64(upper) {
-					
 
 				// }
 			}
 			// getIndex(100,50,seed)
 			// fmt.Println(minidx, mini)
-			
+
 			fmt.Println(time.Since(start))
 		},
 	}
 
-	nocorrectionDvCmd:=&cobra.Command {
-		Use: "ndv",
+	nocorrectionDvCmd := &cobra.Command{
+		Use:   "ndv",
 		Short: "ndv duplicate votes",
-		Long: "ndv duplicate votes",
+		Long:  "ndv duplicate votes",
 		Run: func(cmd *cobra.Command, args []string) {
 			start := time.Now()
 			searchDuplicateVoteWithoutCorrection()
@@ -945,21 +864,21 @@ func main() {
 		},
 	}
 
-	committeeScheduleCmd:=&cobra.Command {
-		Use: "csc",
+	committeeScheduleCmd := &cobra.Command{
+		Use:   "csc",
 		Short: "csc duplicate votes",
-		Long: "csc duplicate votes",
+		Long:  "csc duplicate votes",
 		Run: func(cmd *cobra.Command, args []string) {
 			start := time.Now()
-			getValidatorIdx(102368, 0)
+			// getCommitteeSchedule(608065, 2)
 			fmt.Println(time.Since(start))
 		},
 	}
 
-	specializedCmd:=&cobra.Command {
-		Use: "f",
+	specializedCmd := &cobra.Command{
+		Use:   "f",
 		Short: "f duplicate votes",
-		Long: "f duplicate votes",
+		Long:  "f duplicate votes",
 		Run: func(cmd *cobra.Command, args []string) {
 			start := time.Now()
 			// put your stuff here
@@ -967,6 +886,18 @@ func main() {
 			fmt.Println(time.Since(start))
 		},
 	}
+
+	recoverCmd := &cobra.Command{
+		Use:   "recover",
+		Short: "recover duplicate votes",
+		Long:  "recover duplicate votes",
+		Run: func(cmd *cobra.Command, args []string) {
+			start := time.Now()
+			recover()
+			fmt.Println(time.Since(start))
+		},
+	}
+	// [25838 82995 62200 14972 29786 4562 54057 24424 11095 4306 67871 65557 77003 51987 27434 64025 31467 29367 5635 96106 66679 18607 55579 11322 38818 16880 26324 82677 50214 17402 4675 18507 72646 43328 37267 68087 15316 47509 53837 70595 31500 36641 47611 74666 67516 50158 72865 71930 8439 57120 23306 62075 68426 77238 39762 74187 49158 87238 25138 91680 91463 45001 52639 42813 83778 378 70168 48546 56119 3282 25280 94017 36392 15024 9401 80150 44706 6148 57694 92182 83944 69714 1385 63150 72470 14075 90758 22935 73161 8517 92735 10346 52401 14525 51551 89784 48244 83176 76113 78182 44429 10512 60095 17832 52523 61570 17834 5144 32874 48660 77622 52914 63642 30141 33353 45075 30686 9306 7813 81368 41411 26909 17633 27967 80442 10710 81238 17307 57107 78546 74953 39480]
 	// [34175 71854 15777 43044 83060 68488 74930 6866 30612 22209 8203 38744 32006 6912 31483 76150 78495 72680 6207 52072 3438 52970 70005 50055 9219 49034 79536 3287 37151 69549 9629 10487 80366 49597 74729 72369 1928 58422 62686 10015 14855 45584 3812 44536 7086 65008 54080 35452 66333 88545 3640 16838 26948 18648 73315 96711 76089 40684 59195 82214 60912 85479 41853 34251 13415 92975 1803 51066 70187 55434 78032 24796 22988 45349 24761 37273 55862 15586 51153 93790 29410 58326 65794 63952 34262 46855 76112 38487 73618 92635 69464 72965 84040 4503 52880 801 22414 56797 14229 77431 10967 8636 17392 96585 81022 11332 45034 18700 19963 78320 79005 17647 96857 30491 75924 4755 11631 89925 78491 31324 58005 25528 92912 72759 14422 5282 46414 16399 15734 55847 48083]
 	// [41031 74135 17027 92871 2287 18220 3587 40119 52887 39619 11495 15072 24714 61426 30083 42836 7818 18021 45388 23525 28553 12244 33570 25506 69711 1715 77863 67409 60550 57159 74089 4298 26181 50728 93409 50865 2789 96288 11560 22575 73460 30993 83755 92868 73411 34631 51333 47688 27123 51654 48658 30975 49324 54691 13896 41899 95559 1387 2888 40714 71821 1297 64024 90685 9863 27063 4581 72056 32003 3452 59225 416 94605 79015 48776 44613 76264 62060 50971 89324 23952 66746 13727 40452 64424 85363 75754 44971 14953 68122 32291 94646 36046 88232 10545 78519 9924 49036 51119 71247 77776 80152 44189 14638 23318 42216 45490 51760 51649 38857 45592 92794 19228 47195 21947 55958 77008 61939 18850 59694 56974 19442 42578 79160 26970 32704 12395 41786 35098 38640 77717]
 	// [1055 6526 14825 10490 15565 5824 19244 3786 7205 14484 17109 5285 3212 20400 16842 6759 19882 16292 16345 19679 4118 7834 20934 3952 17225 5671 8651 6303 3034 502 662 19667 11116 19211 2594 17419 12164 11703 14754 6858 19678 8847 12591 11728 12835 11050 10042 1976 18290 11721 11690 16311 9494 4633 2622 2949 9060 8096 15304 12867 4031 7322 11942 374 6304 6570 20568 17254 15282 18012 5108 10436 4913 16381 20629 15391 7825 8100 20757 1221 10285 4120 3745 2404 2920 2634 11317 1583 16491 8912 4370 18696 312 7068 4026 15590 8730 17976 5903 3008 14147 3980 11605 9907 13025 19989 14245 9392 2031 16053 868 84 18827 6410 16146 16191 11214 13031 20253 8557 8280 3228 12525 11632 20134 16190 16883 16827 11972 16748 7649 11221]
@@ -974,10 +905,6 @@ func main() {
 	// [16264 20662 17562 5586 16174 5826 19247 21042 657 5790 19843 814 12353 13179 20446 11397 11437 15998 10434 15218 916 9782 3461 6119 5358 10617 12746 1945 3990 15788 20878 13370 13381 14734 14840 5081 13144 1589 18544 19262 5653 11596 17906 21054 94 12421 15840 3782 574 11367 19403 4541 223 9898 1015 19332 3233 12046 15915 1653 5090 10180 6961 6564 467 161 13666 2442 16009 15084 18103 19779 19426 3560 7790 6287 18088 313 696 7695 9837 4645 5828 13884 11895 3409 15383 7394 925 8693 11297 7643 6713 7297 19027 11978 5956 3641 14892 10826 17206 16130 17257 3013 20262 20850 5476 19336 2433 8818 6806 1107 1484 21001 14568 14967 16796 10981 940 12119 4852 7298 2592 15494 13172 12914 6802 3661 16861 1977 9297 17141]
 	// [4973 7331 93582 234 84360 20696 85474 22450 86128 71606 83346 69210 5840 30415 84927 9713 2783 31455 18682 90196 62996 45959 84891 32147 62416 62441 14845 2818 30982 47362 44946 82705 45109 42340 84242 56964 85187 48930 40601 12142 77112 48700 16888 54993 25424 311 2277 18395 20809 12885 84227 43855 36159 31525 61004 40506 29405 77394 21962 51794 53549 12699 73421 73145 83826 33629 27945 45491 31904 34978 17420 38049 28428 51237 21259 68381 27996 81638 6675 44150 71650 36622 60231 51316 84038 15393 88386 52733 23370 79457 48019 67597 46817 43415 70060 48326 63291 27459 41318 75980 24741 7750 22661 40094 50277 7805 47611 11052 91118 58955 24939 63753 6171 46699 35551 11349 64808 46406 91536 57562 83318 8308 85876 35851 34842 48743 55059 81619 57520 62269 39317 96500]
 	// [17115 71133 46500 58690 56052 46498 7958 66058 55889 1757 79031 8440 60981 46747 80754 94668 67367 83130 70781 37620 38348 7852 59783 49955 93640 14556 65735 82961 71530 45456 83879 24982 83390 23284 60569 74721 77775 8480 17033 12011 21880 7579 15210 54662 80570 56053 38230 38981 65975 58261 17755 81100 76577 37140 7150 450 31043 21321 72350 70253 2252 79210 96159 50946 47635 39984 88026 92589 59030 10716 703 68821 21582 30895 38853 89314 47388 11188 39217 86899 52049 13791 50033 64025 22754 50817 34756 64991 17106 482 58662 28294 45495 72806 25765 40539 83044 8030 3345 32788 34273 53592 94492 12453 59575 24530 50073 59137 15009 27777 85648 40541 44521 12926 44318 54000 40237 66874 77246 3730 35411 8138 45392 95558 22767 67906 63184 39632 95836 31436 34725 42246]
-
-	
-	
-	
 
 	rootCmd.AddCommand(argsCmd)
 	rootCmd.AddCommand(verifyAllAttestationInBlockCmd)
@@ -998,29 +925,20 @@ func main() {
 	rootCmd.AddCommand(nocorrectionDvCmd)
 	rootCmd.AddCommand(committeeScheduleCmd)
 	rootCmd.AddCommand(specializedCmd)
-
-
+	rootCmd.AddCommand(recoverCmd)
 
 
 	// Parse the command line flags and arguments
 	rootCmd.Execute()
 
-	
-
-
-	
-	
 	// checkDoubleVoteWithLocalData()
 	// a := []int{1041108, 1041109, 1041117}
 	// for _, v := range a{
 	// 	fmt.Println(verfiyAttestationByValidatorAndBlock(33096, v))
-		
+
 	// }
 	// verfiyAttestationByValidatorAndBlock()
 	// verifyAllAttestationInBlock(3)
-	
-	
-	
 
 	// searchSinglePubKey(88475, 608067)
 	// for i := 608064; i<= 608086; i++{
@@ -1028,7 +946,7 @@ func main() {
 	// 		fmt.Println(i)
 	// 		verifyAllAttestationInBlock(i)
 	// 	}
-		
+
 	// }
 	// // verfiyAttestationByValidatorAndBlock(4219, 608067)
 	// checkSurroundVoteWithLocalData()
@@ -1036,7 +954,7 @@ func main() {
 	// _ = ioutil.WriteFile("total_slot:committeeIdx.json", file, 0644)
 	// r := verfiyAttestationByValidatorAndBlock(4219, 608067)
 	// fmt.Println(r)
-	
+
 	// for i := 608064; i <= 608095; i++{
 	// 	attestations := readBlockInfo("epoch/", uint(i))
 	// 	for _, attestation := range(attestations.Data){
@@ -1048,5 +966,5 @@ func main() {
 	// }
 
 	// getValidatorMap2()
-	
+
 }
