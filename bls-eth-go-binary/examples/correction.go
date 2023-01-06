@@ -191,7 +191,8 @@ func recover() {
 			}
 		}
 		fmt.Println(correctedValIdx)
-		f.WriteString(fmt.Sprintf("%s, %d\n", sig, correctedValIdx))
+		// block slot, aggregationBits, 
+		f.WriteString(fmt.Sprintf("%s, %d\n", row, correctedValIdx))
 
 	}
 	readFile.Close()
@@ -263,6 +264,8 @@ func rec(epoch int){
 	// 
 }
 
+
+
 func verifyCorrected() {
 	readFile, _ := os.Open("allFalse.txt")
 	fileScanner := bufio.NewScanner(readFile)
@@ -273,7 +276,8 @@ func verifyCorrected() {
     defer f.Close()
 
 	correction := readCorrection("correction/res.txt")
-  
+	t := 0
+	ff := 0
 	for fileScanner.Scan() {
 		fa := fileScanner.Text()
 		// i := strings.Index(fa, "\"")
@@ -306,10 +310,13 @@ func verifyCorrected() {
 		// get sig to verify
 		sig = sig[2:]
 		r := aggregateVerify(signing_root[:], pks, sig)
+		
 		if r {
-			f.WriteString("true\n")
+			// f.WriteString("true\n")
+			t++
 		}else{
-			f.WriteString("false\n")
+			f.WriteString(fa+"\n")
+			ff++
 		}
 			
 		
@@ -317,6 +324,7 @@ func verifyCorrected() {
 
 
 	}
+	fmt.Println(t, ff)
 	readFile.Close()
 	
 }
