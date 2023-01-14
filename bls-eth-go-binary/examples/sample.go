@@ -579,7 +579,7 @@ func main() {
 
 	// Create the root command
 	rootCmd := &cobra.Command{
-		Use: "ss",
+		Use: "sscli",
 	}
 
 	// Define a flag for the verbosity level
