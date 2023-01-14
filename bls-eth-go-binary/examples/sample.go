@@ -600,7 +600,7 @@ func main() {
 	var blockId uint64
 	verifyAllAttestationInBlockCmd := &cobra.Command{
 		Use:   "verifyAll --blockId=<blockslot>",
-		Short: "verify all attestations in a specified block",
+		Short: "verify all attestations in a specified block, if the block attestation data doesn't exist in local, automatically fetch to test/",
 		Long:  "verifyAllAttestationInBlock [blockid] if the block doesn't exist locally, fetch the block from beaconcha.in under test/ and verify",
 		Run: func(cmd *cobra.Command, args []string) {
 			fmt.Println(verifyAllAttestationInBlock(int(blockId)))
@@ -613,7 +613,7 @@ func main() {
 	var validatorIdx uint64
 	verifyAttestationByValidatorAndBlockCmd := &cobra.Command{
 		Use:   "verify --valIdx=<validatorIdx> --blockId=<blockslot>",
-		Short: "verify attestations that contains validatorIdx in a specified block",
+		Short: "verify attestations that identified by validatorIdx and block number, print result to console",
 		Long:  "verfiyAttestationByValidatorAndBlock [blockid] verify att that involves [valIdx]",
 		Run: func(cmd *cobra.Command, args []string) {
 			fmt.Println(verfiyAttestationByValidatorAndBlock(int(validatorIdx), int(blockId)))
@@ -686,33 +686,33 @@ func main() {
 	}
 
 	unvotedValidatorsCmd := &cobra.Command{
-		Use:   "unvote validators in epoch defined by interested block",
-		Short: "unvote validators in epoch defined by interested block",
+		Use:   "unvote change the block directly in function parameter below",
+		Short: "find all unvoted validators in an epoch defined by input block",
 		Long:  "unvote validators in epoch defined by interested block",
 		Run: func(cmd *cobra.Command, args []string) {
 			unvotedValidators(608067)
 		},
 	}
 	smartSearchCmd := &cobra.Command{
-		Use:   "ss smart search pubkey for correct signing validator sets",
-		Short: "ss smart search pubkey for correct signing validator sets",
-		Long:  "ss smart search pubkey for correct signing validator sets",
+		Use:   "ss input the block number the wrong attestation is in",
+		Short: "use unvoted validators as a restrained space for faster search pubkey for correcting signing validator sets",
+		Long:  "use unvoted validators as a restrained space for faster search pubkey for correcting signing validator sets",
 		Run: func(cmd *cobra.Command, args []string) {
 			smartSearchPubkeys(608067)
 		},
 	}
 	signingRootCmd := &cobra.Command{
-		Use:   "sr validators in epoch defined by interested block",
-		Short: "sr validators in epoch defined by interested block",
-		Long:  "sr validators in epoch defined by interested block",
+		Use:   "sr change the param in getSigningRoot to use",
+		Short: "compute and print signing root for a specific attestation",
+		Long:  "compute and print signing root for a specific attestation",
 		Run: func(cmd *cobra.Command, args []string) {
 			getSigningRoot()
 		},
 	}
 	bfPubkeyCmd := &cobra.Command{
-		Use:   "bf brufeforce search pubkey for each 1-val case",
-		Short: "bf brufeforce search pubkey for each 1-val case",
-		Long:  "bf brufeforce search pubkey for each 1-val case",
+		Use:   "bf",
+		Short: "bruteforce search pubkey for each 1-val case",
+		Long:  "bruteforce search pubkey for each 1-val case",
 		Run: func(cmd *cobra.Command, args []string) {
 			start := time.Now()
 			bruteforceSearch()
@@ -722,9 +722,9 @@ func main() {
 	}
 
 	duplicateVoteCmd := &cobra.Command{
-		Use:   "dv duplicated vote for same target epoch with diff data",
-		Short: "dv duplicated vote for same target epoch with diff data",
-		Long:  "dv duplicated vote for same target epoch with diff data",
+		Use:   "dv",
+		Short: "search in-file duplicated vote from google drive after correction",
+		Long: "search in-file duplicated vote from google drive after correction, this doesn't verify attestation signature so might not be double vote",
 		Run: func(cmd *cobra.Command, args []string) {
 			start := time.Now()
 			searchDuplicateVote()
@@ -735,8 +735,8 @@ func main() {
 
 	correctionCmd := &cobra.Command{
 		Use:   "show correction map",
-		Short: "show correction map",
-		Long:  "show correction map",
+		Short: "print correction map to the console",
+		Long:  "print correction map to the console",
 		Run: func(cmd *cobra.Command, args []string) {
 			start := time.Now()
 			fmt.Println(readCorrection("correction/all2.txt"))
@@ -747,8 +747,8 @@ func main() {
 
 	verifyDVCmd := &cobra.Command{
 		Use:   "vdv",
-		Short: "verify duplicate votes",
-		Long:  "verify duplicate votes",
+		Short: "search all verifiable in-file double vote after correction from google drive, expect all output should be slashed otherwise staking-slashing model has trouble",
+		Long: "search all verifiable in-file double vote after correction from google drive, expect all output should be slashed otherwise staking-slashing model has trouble",
 		Run: func(cmd *cobra.Command, args []string) {
 			start := time.Now()
 			verifyDv()
@@ -855,8 +855,8 @@ func main() {
 
 	nocorrectionDvCmd := &cobra.Command{
 		Use:   "ndv",
-		Short: "ndv duplicate votes",
-		Long:  "ndv duplicate votes",
+		Short: "search duplicated vote without validator index correction, this is for detecting all potentially slashable case directly from beaconcha.in",
+		Long: "search duplicated vote without validator index correction, this is for detecting all potentially slashable case directly from beaconcha.in",
 		Run: func(cmd *cobra.Command, args []string) {
 			start := time.Now()
 			searchDuplicateVoteWithoutCorrection()
@@ -866,8 +866,7 @@ func main() {
 
 	committeeScheduleCmd := &cobra.Command{
 		Use:   "csc",
-		Short: "csc duplicate votes",
-		Long:  "csc duplicate votes",
+		Short: "get computed committee schedule given randaomix etc.",
 		Run: func(cmd *cobra.Command, args []string) {
 			start := time.Now()
 			// getCommitteeSchedule(608065, 2)
@@ -876,12 +875,12 @@ func main() {
 	}
 
 	specializedCmd := &cobra.Command{
-		Use:   "f",
-		Short: "f duplicate votes",
-		Long:  "f duplicate votes",
+		Use:   "fi",
+		Short: "get first index of shuffled committee given randaomix etc. ",
+		Long: "get first index of shuffled committee given randaomix etc. used for testing and pattern find",
 		Run: func(cmd *cobra.Command, args []string) {
 			start := time.Now()
-			// put your stuff here
+			// fill your args to func below
 			// getFirstIndex("", )
 			fmt.Println(time.Since(start))
 		},
@@ -889,8 +888,8 @@ func main() {
 
 	recoverCmd := &cobra.Command{
 		Use:   "recover",
-		Short: "recover duplicate votes",
-		Long:  "recover duplicate votes",
+		Short: "correct the wrong validator index for attestation that's has false signature verification",
+		Long:  "correct the wrong validator index for attestation that's has false signature verification",
 		Run: func(cmd *cobra.Command, args []string) {
 			start := time.Now()
 			recover()
@@ -900,8 +899,8 @@ func main() {
 
 	verifyCorrectedCmd := &cobra.Command{
 		Use:   "vc",
-		Short: "vc duplicate votes",
-		Long:  "vc duplicate votes",
+		Short: "verify all correction made from computed committee schedule by checking the signature",
+		Long:  "verify all correction made from computed committee schedule by checking the signature, print correct and wrong stat to console",
 		Run: func(cmd *cobra.Command, args []string) {
 			start := time.Now()
 			verifyCorrected()
