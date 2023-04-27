@@ -1,4 +1,4 @@
-# run the cli
+# Run the cli
 ```
 cd bls-eth-go-binary && go run examples/*.go
 ```
@@ -9,9 +9,15 @@ The `sscli` command-line tool is a collection of utilities for analyzing and cor
 
 ## Usage
 
-To use `sscli`, you can either build the tool from source code or download a prebuilt binary. 
+To use `sscli`, you can either build and use the tool from source code 
+```
+cd bls-eth-go-binary && go run examples/*.go
+```
+or download a prebuilt binary. 
 
-If you choose to download the prebuilt binary, simply add it to your system's `PATH` environment variable, and you can run `sscli` from anywhere in the terminal. You can find the prebuilt binary on GitHub [here](https://github.com/<user>/<repository>/releases).
+We recommend run the source file since certain action is dependent on the file structure. 
+
+If you choose to download the prebuilt binary, simply add it to your system's `PATH` environment variable, and you can run `sscli` from anywhere in the terminal. You can find the prebuilt binary on GitHub [here](https://github.com/justcode740/ss/releases/tag/v1.0.0).
 
 ## Available Commands
 
@@ -44,4 +50,5 @@ If you choose to download the prebuilt binary, simply add it to your system's `P
 - `-h`, `--help`: Show help message for `sscli`
 
 
-
+## Note
+This code was written very quickly and is intended for research purposes only. It may be rough around the edges and should be used with caution. For a full description of our research and methodology, please refer to our paper available at https://papers.ssrn.com/sol3/papers.cfm?abstract_id=4344299.
